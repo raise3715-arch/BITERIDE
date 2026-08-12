@@ -539,35 +539,7 @@
   <div class="toast" id="toast"></div>
 
   <!-- INCOMING ORDER ALERT -->
-  <div class="order-alert-overlay" id="order-alert-overlay">
-    <div class="order-alert-card">
-      <div class="order-alert-top">
-        <div class="order-alert-bell">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-        </div>
-        <div>
-          <p class="order-alert-title">New order received!</p>
-          <p class="order-alert-sub" id="alert-order-num">KOT-0000</p>
-        </div>
-      </div>
-      <div class="order-alert-body">
-        <div class="order-alert-customer">
-          <p class="oa-label">Customer</p>
-          <p class="oa-value" id="alert-customer-name">—</p>
-          <p class="oa-sub" id="alert-customer-address"></p>
-          <p class="oa-sub" id="alert-customer-phone"></p>
-        </div>
-        <div class="order-alert-items" id="alert-items"></div>
-        <div class="order-alert-total">
-          <span>Total</span>
-          <span id="alert-total">₹0</span>
-        </div>
-      </div>
-      <div class="order-alert-actions">
-        <button class="btn-accept" style="width:100%;" onclick="dismissOrderAlert()">OK, got it</button>
-      </div>
-    </div>
-  </div>
+
 </div>
 
 <script type="module">
@@ -597,12 +569,9 @@
   let newItemPhoto = null;
   let orders = [];
   let alertedOrderIds = new Set();
-  let pendingAlertQueue = [];
-  let currentAlertOrder = null;
 
   // ---- New-order sound (Web Audio API, no external file needed) ----
   let audioCtx = null;
-  let alertSoundTimer = null;
 
   function unlockAudio(){
     if(!audioCtx){
@@ -634,15 +603,9 @@
     beep(1175, 0.18, 0.2);
   }
 
-  function startAlertSound(){
+  function playNewOrderChime(){
     unlockAudio();
-    stopAlertSound();
     playAlertChime();
-    alertSoundTimer = setInterval(playAlertChime, 1500);
-  }
-
-  function stopAlertSound(){
-    if(alertSoundTimer){ clearInterval(alertSoundTimer); alertSoundTimer = null; }
   }
 
   function showScreen(id){
@@ -839,10 +802,8 @@
       all.filter(o => o.status === 'pending').forEach(o => {
         if(!alertedOrderIds.has(o.id)){
           alertedOrderIds.add(o.id);
-          pendingAlertQueue.push(o);
         }
       });
-      showNextOrderAlert();
     }catch(e){
       debugLog('refreshOrdersOnce ERROR: ' + (e && e.message ? e.message : e));
     }
@@ -871,14 +832,16 @@
       all.filter(o => o.status === 'pending').forEach(o => {
         if(!alertedOrderIds.has(o.id)){
           alertedOrderIds.add(o.id);
-          pendingAlertQueue.push(o);
-          // Only fire the system/phone notification for orders that arrive
-          // while actively listening — not for the batch of already-pending
-          // orders shown right after login (those get the in-app popup only).
-          if(!firstSnapshot) notifyNewOrder(o);
+          // Only alert (sound/toast/system notification) for orders that
+          // arrive while actively listening — not for the batch of
+          // already-pending orders shown right after login.
+          if(!firstSnapshot){
+            showToast('New order — ' + (o.orderNumber || o.id));
+            playNewOrderChime();
+            notifyNewOrder(o);
+          }
         }
       });
-      showNextOrderAlert();
       firstSnapshot = false;
     });
   }
@@ -953,47 +916,6 @@
     showScreen('your-orders');
   };
 
-  function showNextOrderAlert(){
-    if(currentAlertOrder || pendingAlertQueue.length === 0) return;
-    // Skip any that already got marked completed elsewhere before their turn
-    let next = pendingAlertQueue.shift();
-    const live = orders.find(o => o.id === next.id);
-    if(!live || live.status === 'completed'){
-      showNextOrderAlert();
-      return;
-    }
-    currentAlertOrder = live;
-    renderOrderAlert(live);
-    document.getElementById('order-alert-overlay').classList.add('active');
-    startAlertSound();
-  }
-
-  function renderOrderAlert(o){
-    document.getElementById('alert-order-num').textContent = o.orderNumber || o.id;
-    document.getElementById('alert-customer-name').textContent = o.customerName || 'Guest';
-    document.getElementById('alert-customer-address').textContent = o.customerAddress || '';
-    document.getElementById('alert-customer-phone').textContent = o.customerPhone || '';
-    const itemsEl = document.getElementById('alert-items');
-    itemsEl.innerHTML = (o.items || []).map(it => `
-      <div class="oa-item-row">
-        <span class="oa-item-name"><span class="oa-item-qty">${it.qty}×</span> ${it.name}</span>
-        <span>₹${(it.price * it.qty).toFixed(2)}</span>
-      </div>
-    `).join('');
-    document.getElementById('alert-total').textContent = '₹' + (o.total || 0).toFixed(2);
-  }
-
-  function closeAlertOverlay(){
-    stopAlertSound();
-    document.getElementById('order-alert-overlay').classList.remove('active');
-    currentAlertOrder = null;
-    showNextOrderAlert();
-  }
-
-  window.dismissOrderAlert = function(){
-    closeAlertOverlay();
-  };
-
   // Marks an order done AND records it as a sale in one step — adds the
   // order's total to Total Sales / orders-recorded count, same as the
   // existing manual "Record sale" button on menu items.
@@ -1010,17 +932,12 @@
       await update(ref(db, 'restaurants/' + current.id), { totalSales, saleCount });
     }
     showToast('Order completed — sale recorded');
-    if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
   }
 
   function logout(){
     current = null;
     orders = [];
     alertedOrderIds = new Set();
-    pendingAlertQueue = [];
-    stopAlertSound();
-    document.getElementById('order-alert-overlay').classList.remove('active');
-    currentAlertOrder = null;
     document.getElementById('li-username').value = '';
     document.getElementById('li-password').value = '';
     showScreen('welcome');
