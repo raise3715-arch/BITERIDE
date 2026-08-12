@@ -76,6 +76,31 @@
     display:none; text-align:center;
   }
   .toast.show{ display:block; }
+
+  /* Swiggy-style new order popup */
+  .order-popup-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2000;
+    display:none; align-items:flex-end; justify-content:center;
+  }
+  .order-popup-overlay.show{ display:flex; }
+  .order-popup{
+    width:100%; max-width:420px; background:var(--cloud); border-radius:20px 20px 0 0;
+    padding:24px; animation:popupUp .25s ease-out;
+  }
+  @keyframes popupUp{ from{ transform:translateY(30px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
+  .order-popup-ring{
+    width:56px; height:56px; border-radius:50%; background:var(--chili); display:flex;
+    align-items:center; justify-content:center; margin:0 auto 12px; animation:ringPulse 1s infinite;
+  }
+  @keyframes ringPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+  .order-popup-eyebrow{ color:var(--chili); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; text-align:center; margin:0; font-weight:700; }
+  .order-popup-title{ color:var(--ink); font-family:'Fraunces',serif; font-size:22px; font-weight:700; text-align:center; margin:4px 0 16px; }
+  .order-popup-body{ background:#fff; border-radius:12px; padding:14px 16px; margin-bottom:8px; }
+  .order-popup-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ink); padding:3px 0; }
+  .order-popup-row-total{ border-top:1px dashed var(--ink); margin-top:6px; padding-top:6px; font-weight:700; }
+  .order-popup-cust{ color:#5C574C; font-size:12px; margin:8px 0 16px; text-align:center; }
+  .order-popup-btns{ display:flex; gap:10px; }
+  .order-popup-btns .btn-primary{ width:100%; padding:14px; border:none; border-radius:10px; background:var(--leaf); color:var(--cloud); font-weight:600; font-size:15px; cursor:pointer; font-family:'Inter',sans-serif; }
 </style>
 </head>
 <body>
@@ -83,10 +108,25 @@
 
   <div class="toast" id="toast"></div>
 
+  <div class="order-popup-overlay" id="order-popup-overlay">
+    <div class="order-popup">
+      <div class="order-popup-ring">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F7F3EA" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <p class="order-popup-eyebrow">NEW ORDER</p>
+      <h2 class="order-popup-title" id="popup-order-num">KOT-0000</h2>
+      <div class="order-popup-body" id="popup-items"></div>
+      <p class="order-popup-cust" id="popup-cust"></p>
+      <div class="order-popup-btns">
+        <button class="btn-primary" id="popup-accept-btn">Accept order</button>
+      </div>
+    </div>
+  </div>
+
   <!-- ORDER LIST -->
   <section class="screen active" id="screen-list">
     <div class="top-row">
-      <button class="btn-back" onclick="window.location.href='restaurant-index.html'">
+      <button class="btn-back" onclick="window.location.href='index.html'">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div>
@@ -159,7 +199,7 @@ let selectedOrderId = null;
 let knownOrderIds = null;
 
 if (!restId) {
-  window.location.href = 'restaurant-index.html';
+  window.location.href = 'index.html';
 }
 
 function showScreen(id) {
@@ -183,12 +223,54 @@ function beep() {
     const g = ctx.createGain();
     o.connect(g); g.connect(ctx.destination);
     o.type = 'sine'; o.frequency.value = 880;
-    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
     o.start();
     o.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
     o.stop(ctx.currentTime + 0.4);
   } catch (e) {}
+}
+
+let ringInterval = null;
+function startRinging() {
+  stopRinging();
+  beep();
+  ringInterval = setInterval(beep, 1200);
+}
+function stopRinging() {
+  if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
+}
+
+function showNewOrderPopup(order) {
+  document.getElementById('popup-order-num').textContent = order.orderNumber || 'New order';
+  document.getElementById('popup-cust').textContent = (order.customerName || 'Guest') + " · " + (order.customerAddress || '');
+  const itemsEl = document.getElementById('popup-items');
+  itemsEl.innerHTML = "";
+  (order.items || []).forEach(it => {
+    const row = document.createElement('div');
+    row.className = "order-popup-row";
+    row.innerHTML = `<span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span>`;
+    itemsEl.appendChild(row);
+  });
+  const totalRow = document.createElement('div');
+  totalRow.className = "order-popup-row order-popup-row-total";
+  totalRow.innerHTML = `<span>Total</span><span>₹${order.total || 0}</span>`;
+  itemsEl.appendChild(totalRow);
+
+  const overlay = document.getElementById('order-popup-overlay');
+  overlay.classList.add('show');
+  startRinging();
+
+  const acceptBtn = document.getElementById('popup-accept-btn');
+  acceptBtn.onclick = async () => {
+    stopRinging();
+    overlay.classList.remove('show');
+    try {
+      const { db, ref, update } = window.fb;
+      await update(ref(db, 'restaurants/' + restId + '/orders/' + order.id), { status: 'preparing' });
+    } catch (e) {}
+    showToast("Order accepted");
+  };
 }
 
 function timeAgo(ts) {
@@ -217,9 +299,11 @@ window.addEventListener('fb-ready', () => {
     renderList();
 
     if (knownOrderIds !== null) {
+      let newOrder = null;
       currentIds.forEach(id => {
-        if (!knownOrderIds.has(id)) { beep(); showToast("🔔 New order received!"); }
+        if (!knownOrderIds.has(id)) newOrder = list.find(o => o.id === id);
       });
+      if (newOrder) showNewOrderPopup(newOrder);
     }
     knownOrderIds = currentIds;
 
