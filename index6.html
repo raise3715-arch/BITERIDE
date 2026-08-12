@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ruchi Partner</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#3F6B4F" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Ruchi Partner" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="icon" href="icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --orange:#FC8019;
+    --orange-dark:#E6710D;
+    --orange-light:#FFF1E4;
+    --dark:#3D4152;
+    --grey:#686B78;
+    --grey-light:#F4F4F4;
+    --green:#60B246;
+    --white:#ffffff;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:#1a1a1a;
+    font-family:'Inter', system-ui, sans-serif;
+    color:var(--dark);
+    display:flex;
+    justify-content:center;
+    padding:24px 12px;
+    min-height:100vh;
+  }
+  .phone{
+    width:100%;
+    max-width:420px;
+    min-height:720px;
+    background:var(--white);
+    border-radius:2.2rem;
+    overflow:hidden;
+    box-shadow:0 20px 60px rgba(0,0,0,.5);
+    border:6px solid #000;
+    display:flex;
+    flex-direction:column;
+    position:relative;
+  }
+  .screen{ display:none; flex-direction:column; flex:1; min-height:0; }
+  .screen.active{ display:flex; }
+
+  h1,h2,h3{ font-family:'Poppins', sans-serif; }
+
+  /* ---- Top bar (in-app screens) ---- */
+  .topbar{
+    background:var(--white);
+    padding:20px 20px 16px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    border-bottom:1px solid #eee;
+  }
+  .topbar h1{
+    color:var(--dark);
+    font-size:1.1rem;
+    margin:0;
+    font-weight:700;
+  }
+  .topbar .left{ display:flex; align-items:center; gap:10px; }
+  .back-btn{ background:var(--grey-light); border:none; color:var(--dark); cursor:pointer; padding:7px; border-radius:50%; display:flex; }
+  .icon-btn{ background:var(--grey-light); border:none; cursor:pointer; padding:8px; border-radius:50%; display:flex; color:var(--dark); }
+
+  /* ---- Welcome (Swiggy-style splash) ---- */
+  .welcome-body{
+    background:linear-gradient(160deg, var(--orange) 0%, var(--orange-dark) 100%);
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:0 32px;
+    text-align:center;
+    position:relative;
+    overflow:hidden;
+  }
+  .welcome-body::before{
+    content:'';
+    position:absolute;
+    width:260px;height:260px;
+    border-radius:50%;
+    background:rgba(255,255,255,.08);
+    top:-80px; right:-80px;
+  }
+  .welcome-body::after{
+    content:'';
+    position:absolute;
+    width:180px;height:180px;
+    border-radius:50%;
+    background:rgba(255,255,255,.07);
+    bottom:-60px; left:-60px;
+  }
+  .logo-badge{
+    width:76px;height:76px;border-radius:20px;
+    background:var(--white);
+    color:var(--orange);
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:22px;
+    box-shadow:0 8px 24px rgba(0,0,0,.15);
+    position:relative; z-index:1;
+  }
+  .welcome-body h1{
+    color:#fff;
+    font-size:2rem;
+    font-weight:800;
+    margin:0 0 8px;
+    position:relative; z-index:1;
+  }
+  .welcome-body p{
+    color:rgba(255,255,255,.9);
+    font-size:.9rem;
+    margin:0 0 44px;
+    position:relative; z-index:1;
+  }
+  .welcome-actions{ width:100%; display:flex; flex-direction:column; gap:12px; position:relative; z-index:1; }
+
+  button{ font-family:inherit; }
+  .btn-white{
+    width:100%; padding:15px; border:none; border-radius:12px;
+    background:#fff; color:var(--orange-dark); font-weight:700; font-size:.92rem;
+    cursor:pointer;
+  }
+  .btn-outline-white{
+    width:100%; padding:15px; border-radius:12px;
+    background:transparent; border:1.5px solid rgba(255,255,255,.7); color:#fff;
+    font-weight:700; font-size:.92rem; cursor:pointer;
+  }
+  .btn-orange{
+    width:100%; padding:15px; border:none; border-radius:12px;
+    background:var(--orange); color:#fff; font-weight:700; font-size:.92rem;
+    cursor:pointer; margin-top:8px;
+    box-shadow:0 6px 16px rgba(252,128,25,.35);
+  }
+  .btn-orange:active{ background:var(--orange-dark); }
+
+  /* ---- Forms ---- */
+  .form-wrap{ flex:1; overflow-y:auto; padding:22px 20px; }
+  .form-title{ font-size:1.3rem; font-weight:800; color:var(--dark); margin:2px 0 4px; }
+  .form-sub{ color:var(--grey); font-size:.85rem; margin:0 0 22px; }
+  .field{ margin-bottom:16px; display:block; }
+  .field .label{
+    font-size:.72rem; font-weight:600; color:var(--grey);
+    display:block; margin-bottom:6px;
+  }
+  input, textarea{
+    width:100%; padding:13px 14px; border-radius:10px;
+    border:1.5px solid #E5E5E5;
+    background:var(--grey-light); color:var(--dark); font-size:.95rem; outline:none;
+    font-family:inherit; transition:border-color .15s;
+  }
+  input:focus, textarea:focus{ border-color:var(--orange); background:#fff; }
+  textarea{ resize:none; }
+  .loc-row{ display:flex; gap:8px; }
+  .loc-btn{
+    background:var(--orange); border:none; color:#fff; border-radius:10px;
+    width:46px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:pointer;
+  }
+  .hint{ font-size:.72rem; color:var(--grey); margin-top:4px; }
+  .error{
+    color:#D93025; font-size:.8rem; margin-bottom:10px; background:#FDECEA;
+    padding:9px 12px; border-radius:8px;
+  }
+  .divider-label{
+    display:flex; align-items:center; gap:10px; color:var(--grey); font-size:.7rem;
+    font-weight:600; text-transform:uppercase; letter-spacing:.05em; margin:22px 0 18px;
+  }
+  .divider-label::before, .divider-label::after{ content:''; flex:1; height:1px; background:#eee; }
+
+  /* ---- Home ---- */
+  .home-body{ flex:1; overflow-y:auto; padding:20px; min-height:0; background:var(--grey-light); }
+  .sales-card{
+    background:linear-gradient(135deg, var(--orange) 0%, var(--orange-dark) 100%);
+    border-radius:18px; padding:20px; margin-bottom:22px;
+    box-shadow:0 8px 20px rgba(252,128,25,.25);
+  }
+  .sales-label{
+    display:flex; align-items:center; gap:6px; color:rgba(255,255,255,.85);
+    font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;
+  }
+  .sales-amount{
+    display:flex; align-items:flex-end; gap:2px; color:#fff;
+    font-family:'Poppins', sans-serif; font-weight:800; font-size:2.1rem;
+  }
+  .sales-sub{ color:rgba(255,255,255,.85); font-size:.78rem; margin-top:4px; }
+
+  .section-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .section-head h2{ font-size:1.05rem; font-weight:700; margin:0; color:var(--dark); }
+  .add-item-btn{
+    display:flex; align-items:center; gap:5px; background:var(--dark); color:#fff;
+    border:none; font-size:.75rem; font-weight:700; padding:9px 15px; border-radius:999px; cursor:pointer;
+  }
+
+  .empty-state{
+    background:#fff; border-radius:16px; padding:40px 10px;
+    text-align:center; color:var(--grey);
+  }
+  .empty-state p{ font-size:.88rem; margin:8px 0 0; }
+
+  .items-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .item-card{ background:#fff; border-radius:16px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .item-photo{
+    aspect-ratio:1/1; background:var(--grey-light); position:relative;
+    display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .item-photo img{ width:100%; height:100%; object-fit:cover; }
+  .item-del{
+    position:absolute; top:6px; right:6px; background:rgba(0,0,0,.5); border:none;
+    border-radius:999px; padding:5px; cursor:pointer; display:flex;
+  }
+  .item-info{ padding:10px; }
+  .item-name{ font-size:.85rem; font-weight:700; line-height:1.2; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:var(--dark); }
+  .item-price{ color:var(--dark); font-size:.78rem; font-weight:700; margin-top:2px; }
+  .item-price::before{ content:'₹'; color:var(--grey); margin-right:1px; }
+  .record-sale-btn{
+    width:100%; margin-top:8px; padding:8px; border:1.5px solid var(--orange); border-radius:8px;
+    background:var(--orange-light); color:var(--orange-dark); font-size:.72rem; font-weight:700; cursor:pointer;
+  }
+
+  /* ---- Modal ---- */
+  .modal-overlay{
+    position:absolute; inset:0; background:rgba(0,0,0,.5);
+    display:none; align-items:flex-end; z-index:20;
+  }
+  .modal-overlay.active{ display:flex; }
+  .modal-sheet{ background:#fff; width:100%; border-radius:24px 24px 0 0; padding:22px 20px 26px; }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; }
+  .modal-head h3{ font-size:1.1rem; font-weight:700; margin:0; color:var(--dark); }
+  .modal-close{ background:var(--grey-light); border:none; cursor:pointer; display:flex; padding:7px; border-radius:50%; }
+  .photo-picker{
+    width:100%; aspect-ratio:3/1.3; border-radius:14px; margin-bottom:16px;
+    background:var(--orange-light); border:1.5px dashed var(--orange);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    cursor:pointer; overflow:hidden; color:var(--orange-dark);
+  }
+  .photo-picker img{ width:100%; height:100%; object-fit:cover; }
+  .photo-picker span{ font-size:.75rem; margin-top:4px; font-weight:600; }
+
+  .toast{
+    position:absolute; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--dark); color:#fff; padding:10px 18px; border-radius:999px;
+    font-size:.78rem; font-weight:500; box-shadow:0 4px 16px rgba(0,0,0,.3); z-index:30;
+    opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .toast.show{ opacity:1; }
+
+  /* ---- Orders list (home screen) ---- */
+  .orders-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:24px; }
+  .order-row{ background:#fff; border-radius:14px; padding:13px 14px; box-shadow:0 1px 4px rgba(0,0,0,.06); }
+  .order-row-top{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .order-row-num{ font-weight:700; font-size:.85rem; color:var(--dark); }
+  .order-badge{ font-size:.65rem; font-weight:700; padding:3px 9px; border-radius:999px; text-transform:uppercase; letter-spacing:.03em; }
+  .order-badge.pending{ background:#FFF1E4; color:var(--orange-dark); }
+  .order-badge.accepted{ background:#EAF7E4; color:var(--green); }
+  .order-badge.rejected{ background:#FDECEA; color:#D93025; }
+  .order-row-items{ color:var(--grey); font-size:.78rem; margin:2px 0 6px; }
+  .order-row-bottom{ display:flex; align-items:center; justify-content:space-between; }
+  .order-row-total{ font-weight:700; font-size:.82rem; color:var(--dark); }
+  .order-row-total::before{ content:'₹'; color:var(--grey); margin-right:1px; }
+  .order-row-actions{ display:flex; gap:8px; }
+  .order-row-actions button{
+    border:none; border-radius:8px; padding:6px 12px; font-size:.72rem; font-weight:700; cursor:pointer;
+  }
+  .order-row-actions .mini-accept{ background:var(--green); color:#fff; }
+  .order-row-actions .mini-reject{ background:var(--grey-light); color:var(--grey); }
+
+  /* ---- Incoming order alert (Swiggy-style popup) ---- */
+  .order-alert-overlay{
+    position:absolute; inset:0; background:rgba(0,0,0,.55);
+    display:none; align-items:flex-end; z-index:40;
+  }
+  .order-alert-overlay.active{ display:flex; }
+  .order-alert-card{
+    background:#fff; width:100%; border-radius:24px 24px 0 0;
+    max-height:88%; display:flex; flex-direction:column; overflow:hidden;
+    animation:oa-slide-up .28s ease-out;
+  }
+  @keyframes oa-slide-up{ from{ transform:translateY(100%); } to{ transform:translateY(0); } }
+
+  .order-alert-top{
+    background:linear-gradient(135deg, var(--green) 0%, #4c9438 100%);
+    padding:18px 20px; display:flex; align-items:center; gap:14px;
+  }
+  .order-alert-bell{
+    width:44px; height:44px; border-radius:50%; background:rgba(255,255,255,.2);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    animation:oa-ring 1s infinite;
+  }
+  @keyframes oa-ring{
+    0%,100%{ transform:rotate(0deg); }
+    20%{ transform:rotate(-14deg); }
+    40%{ transform:rotate(12deg); }
+    60%{ transform:rotate(-8deg); }
+    80%{ transform:rotate(6deg); }
+  }
+  .order-alert-title{ color:#fff; font-weight:800; font-size:1.05rem; margin:0; }
+  .order-alert-sub{ color:rgba(255,255,255,.9); font-size:.8rem; margin:2px 0 0; font-weight:600; }
+
+  .order-alert-body{ padding:18px 20px; overflow-y:auto; }
+  .oa-label{ font-size:.68rem; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:.05em; margin:0 0 4px; }
+  .oa-value{ font-size:.92rem; font-weight:700; color:var(--dark); margin:0; }
+  .oa-sub{ font-size:.78rem; color:var(--grey); margin:2px 0 0; }
+  .order-alert-customer{ padding-bottom:14px; margin-bottom:14px; border-bottom:1px dashed #e5e5e5; }
+
+  .order-alert-items{ display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+  .oa-item-row{ display:flex; align-items:center; justify-content:space-between; font-size:.85rem; color:var(--dark); }
+  .oa-item-name{ display:flex; gap:6px; align-items:baseline; }
+  .oa-item-qty{ color:var(--orange-dark); font-weight:700; font-size:.78rem; }
+
+  .order-alert-total{
+    display:flex; align-items:center; justify-content:space-between;
+    padding-top:12px; border-top:1.5px solid #eee; font-weight:800; font-size:1rem; color:var(--dark);
+  }
+
+  .order-alert-actions{ display:flex; gap:10px; padding:16px 20px 22px; }
+  .order-alert-actions button{
+    flex:1; padding:14px; border:none; border-radius:12px; font-weight:700; font-size:.9rem; cursor:pointer;
+  }
+  .btn-reject{ background:var(--grey-light); color:var(--grey); }
+  .btn-accept{ background:var(--green); color:#fff; box-shadow:0 6px 16px rgba(96,178,70,.35); }
+</style>
+</head>
+<body>
+
+<div class="phone">
+
+  <!-- WELCOME -->
+  <div class="screen active" id="screen-welcome">
+    <div class="welcome-body">
+      <div class="logo-badge">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg>
+      </div>
+      <h1>Ruchi Partner</h1>
+      <p>Manage your menu &amp; track sales, all in one place</p>
+      <div class="welcome-actions">
+        <button class="btn-white" onclick="showScreen('signup')">Register your restaurant</button>
+        <button class="btn-outline-white" onclick="showScreen('login')">Log in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIGNUP -->
+  <div class="screen" id="screen-signup">
+    <div class="topbar">
+      <div class="left">
+        <button class="back-btn" onclick="showScreen('welcome')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h1>Partner registration</h1>
+      </div>
+    </div>
+    <form class="form-wrap" onsubmit="handleSignup(event)">
+      <p class="form-title">Tell us about your restaurant</p>
+      <p class="form-sub">This helps customers find and trust you</p>
+
+      <label class="field">
+        <span class="label">Restaurant name *</span>
+        <input id="su-name" placeholder="e.g. Kayal Kitchen" />
+      </label>
+      <label class="field">
+        <span class="label">Address *</span>
+        <textarea id="su-address" rows="2" placeholder="Shop no, street, city"></textarea>
+      </label>
+      <label class="field">
+        <span class="label">Live location</span>
+        <div class="loc-row">
+          <input id="su-location" placeholder="Tap to fetch or type manually" />
+          <button type="button" class="loc-btn" onclick="useLocation()">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 21s-7-6.4-7-11a7 7 0 0 1 14 0c0 4.6-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>
+          </button>
+        </div>
+        <p class="hint" id="loc-hint"></p>
+      </label>
+      <label class="field">
+        <span class="label">GST number (optional)</span>
+        <input id="su-gst" placeholder="22AAAAA0000A1Z5" />
+      </label>
+
+      <div class="divider-label">Account details</div>
+
+      <label class="field">
+        <span class="label">Username *</span>
+        <input id="su-username" placeholder="Choose a username" />
+      </label>
+      <label class="field">
+        <span class="label">Password *</span>
+        <input id="su-password" type="password" placeholder="Create a password" />
+      </label>
+      <p class="error" id="signup-error" style="display:none;"></p>
+      <button type="submit" class="btn-orange">Create account</button>
+    </form>
+  </div>
+
+  <!-- LOGIN -->
+  <div class="screen" id="screen-login">
+    <div class="topbar">
+      <div class="left">
+        <button class="back-btn" onclick="showScreen('welcome')">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <h1>Log in</h1>
+      </div>
+    </div>
+    <form class="form-wrap" onsubmit="handleLogin(event)">
+      <p class="form-title">Welcome back 👋</p>
+      <p class="form-sub">Log in to manage your restaurant</p>
+
+      <label class="field">
+        <span class="label">Username</span>
+        <input id="li-username" placeholder="Your username" />
+      </label>
+      <label class="field">
+        <span class="label">Password</span>
+        <input id="li-password" type="password" placeholder="Your password" />
+      </label>
+      <p class="error" id="login-error" style="display:none;"></p>
+      <button type="submit" class="btn-orange">Log in</button>
+      <p class="hint" style="text-align:center; margin-top:18px;" id="login-hint">No account yet? Go back and register your restaurant first.</p>
+    </form>
+  </div>
+
+  <!-- HOME -->
+  <div class="screen" id="screen-home">
+    <div class="topbar">
+      <div>
+        <p style="color:var(--grey); font-size:.7rem; font-weight:600; margin:0 0 2px;">WELCOME BACK</p>
+        <h1 id="home-restaurant-name">Restaurant</h1>
+      </div>
+      <button class="icon-btn" onclick="logout()">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+      </button>
+    </div>
+
+    <div class="home-body">
+      <div class="sales-card">
+        <div class="sales-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 6l-9.5 9.5-5-5L1 18"/></svg>
+          Total sales
+        </div>
+        <div class="sales-amount">
+          <span>₹</span>
+          <span id="sales-total">0.00</span>
+        </div>
+        <p class="sales-sub" id="sales-count">0 orders recorded</p>
+      </div>
+
+      <div class="section-head">
+        <h2>Orders</h2>
+      </div>
+      <div class="empty-state" id="orders-empty">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FC8019" stroke-width="2" style="margin:0 auto;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <p>No orders yet. New orders will pop up here.</p>
+      </div>
+      <div class="orders-list" id="orders-list"></div>
+
+      <div class="section-head">
+        <h2>Menu items</h2>
+        <button class="add-item-btn" onclick="openModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M12 5v14M5 12h14"/></svg>
+          Add item
+        </button>
+      </div>
+
+      <div class="empty-state" id="empty-state">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FC8019" stroke-width="2" style="margin:0 auto;"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <p>No items yet. Add your first dish.</p>
+      </div>
+
+      <div class="items-grid" id="items-grid"></div>
+    </div>
+  </div>
+
+  <!-- ADD ITEM MODAL -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal-sheet">
+      <div class="modal-head">
+        <h3>Add menu item</h3>
+        <button class="modal-close" onclick="closeModal()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3D4152" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <form onsubmit="handleAddItem(event)">
+        <div class="photo-picker" id="photo-picker" onclick="document.getElementById('item-photo-input').click()">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FC8019" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+          <span>Add photo</span>
+        </div>
+        <input type="file" id="item-photo-input" accept="image/*" style="display:none;" onchange="handlePhotoPick(event)" />
+        <label class="field">
+          <span class="label">Item name</span>
+          <input id="item-name" placeholder="e.g. Meen Curry" />
+        </label>
+        <label class="field">
+          <span class="label">Price (₹)</span>
+          <input id="item-price" type="number" step="0.01" placeholder="0.00" />
+        </label>
+        <button type="submit" class="btn-orange" style="margin-top:4px;">Save item</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <!-- INCOMING ORDER ALERT -->
+  <div class="order-alert-overlay" id="order-alert-overlay">
+    <div class="order-alert-card">
+      <div class="order-alert-top">
+        <div class="order-alert-bell">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        </div>
+        <div>
+          <p class="order-alert-title">New order received!</p>
+          <p class="order-alert-sub" id="alert-order-num">KOT-0000</p>
+        </div>
+      </div>
+      <div class="order-alert-body">
+        <div class="order-alert-customer">
+          <p class="oa-label">Customer</p>
+          <p class="oa-value" id="alert-customer-name">—</p>
+          <p class="oa-sub" id="alert-customer-address"></p>
+          <p class="oa-sub" id="alert-customer-phone"></p>
+        </div>
+        <div class="order-alert-items" id="alert-items"></div>
+        <div class="order-alert-total">
+          <span>Total</span>
+          <span id="alert-total">₹0</span>
+        </div>
+      </div>
+      <div class="order-alert-actions">
+        <button class="btn-reject" onclick="rejectOrder()">Reject</button>
+        <button class="btn-accept" onclick="acceptOrder()">Accept order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, get, set, update, remove, push, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrM5wKwsnGtIc7HSTk_5R1d3dXEcYyd7o",
+    authDomain: "texi-and-food.firebaseapp.com",
+    databaseURL: "https://texi-and-food-default-rtdb.firebaseio.com",
+    projectId: "texi-and-food",
+    storageBucket: "texi-and-food.firebasestorage.app",
+    messagingSenderId: "98800730432",
+    appId: "1:98800730432:web:9d7651e792c60baafabaa5"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  window.fb = { db: getDatabase(fbApp), ref, get, set, update, remove, push, onValue };
+</script>
+
+<script>
+  // ---- current logged-in restaurant + local UI state ----
+  let current = null;
+  let items = [];
+  let totalSales = 0;
+  let saleCount = 0;
+  let newItemPhoto = null;
+  let orders = [];
+  let alertedOrderIds = new Set();
+  let pendingAlertQueue = [];
+  let currentAlertOrder = null;
+
+  // ---- New-order sound (Web Audio API, no external file needed) ----
+  let audioCtx = null;
+  let alertSoundTimer = null;
+
+  function unlockAudio(){
+    if(!audioCtx){
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if(Ctx) audioCtx = new Ctx();
+    } else if(audioCtx.state === 'suspended'){
+      audioCtx.resume();
+    }
+  }
+
+  function beep(freq, startDelay, duration){
+    if(!audioCtx) return;
+    const t0 = audioCtx.currentTime + startDelay;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.35, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(audioCtx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.03);
+  }
+
+  function playAlertChime(){
+    if(!audioCtx) return;
+    beep(880, 0, 0.16);
+    beep(1175, 0.18, 0.2);
+  }
+
+  function startAlertSound(){
+    unlockAudio();
+    stopAlertSound();
+    playAlertChime();
+    alertSoundTimer = setInterval(playAlertChime, 1500);
+  }
+
+  function stopAlertSound(){
+    if(alertSoundTimer){ clearInterval(alertSoundTimer); alertSoundTimer = null; }
+  }
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + id).classList.add('active');
+    document.getElementById('signup-error').style.display = 'none';
+    document.getElementById('login-error').style.display = 'none';
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  function useLocation(){
+    const hint = document.getElementById('loc-hint');
+    if(!navigator.geolocation){
+      hint.textContent = "Location not supported on this device";
+      return;
+    }
+    hint.textContent = "Locating…";
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude, longitude } = pos.coords;
+        document.getElementById('su-location').value = latitude.toFixed(5) + ", " + longitude.toFixed(5);
+        hint.textContent = "";
+      },
+      () => { hint.textContent = "Couldn't get location — enter manually"; },
+      { timeout: 8000 }
+    );
+  }
+
+  async function handleSignup(e){
+    e.preventDefault();
+    unlockAudio(); // user gesture: unlocks audio so order alert sounds can play later
+    const restaurantName = document.getElementById('su-name').value.trim();
+    const address = document.getElementById('su-address').value.trim();
+    const location = document.getElementById('su-location').value.trim();
+    const gst = document.getElementById('su-gst').value.trim();
+    const username = document.getElementById('su-username').value.trim();
+    const password = document.getElementById('su-password').value;
+    const err = document.getElementById('signup-error');
+
+    if(!restaurantName || !address || !username || !password){
+      err.textContent = "Please fill all required fields";
+      err.style.display = 'block';
+      return;
+    }
+
+    const { db, ref, get, set } = window.fb;
+    const allSnap = await get(ref(db, 'restaurants'));
+    let taken = false;
+    allSnap.forEach(c => { if(c.val().username === username) taken = true; });
+    if(taken){
+      err.textContent = "Username already taken";
+      err.style.display = 'block';
+      return;
+    }
+
+    const id = 'r' + Date.now();
+    const acc = {
+      id, restaurantName, address, location, gst, username, password,
+      status: "active", createdAt: Date.now(), totalSales: 0, saleCount: 0
+    };
+    await set(ref(db, 'restaurants/' + id), acc);
+    current = acc;
+    items = [];
+    totalSales = 0;
+    saleCount = 0;
+    enterHome();
+  }
+
+  async function handleLogin(e){
+    e.preventDefault();
+    unlockAudio(); // user gesture: unlocks audio so order alert sounds can play later
+    const username = document.getElementById('li-username').value.trim();
+    const password = document.getElementById('li-password').value;
+    const err = document.getElementById('login-error');
+
+    const { db, ref, get } = window.fb;
+    const snap = await get(ref(db, 'restaurants'));
+    let found = null;
+    snap.forEach(c => {
+      const v = c.val();
+      if(v.username === username && v.password === password) found = v;
+    });
+    if(!found){
+      err.textContent = "Invalid username or password";
+      err.style.display = 'block';
+      return;
+    }
+    current = found;
+    items = found.menu ? Object.keys(found.menu).map(k => ({ id: k, ...found.menu[k] })) : [];
+    totalSales = found.totalSales || 0;
+    saleCount = found.saleCount || 0;
+    enterHome();
+  }
+
+  function enterHome(){
+    document.getElementById('home-restaurant-name').textContent = current.restaurantName;
+    renderItems();
+    renderSales();
+    showScreen('home');
+    requestNotificationPermission();
+    listenForOrders();
+  }
+
+  // ---- Ask for system-notification permission so new-order alerts can still
+  // show up as a phone notification while the app is minimized/backgrounded
+  // (tab must still be open in memory — this is not a full push notification,
+  // so it won't fire once the app/tab is fully closed by the OS) ----
+  function requestNotificationPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission === 'default'){
+      Notification.requestPermission();
+    }
+  }
+
+  // ---- Shows a system notification for a new order when the app is not
+  // the active/visible tab. If the tab is visible, the in-app popup + sound
+  // (showNextOrderAlert) is enough, so we skip the duplicate system alert.
+  function notifyNewOrder(o){
+    if(!('Notification' in window)) return;
+    if(Notification.permission !== 'granted') return;
+    if(document.visibilityState === 'visible') return;
+    try{
+      const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
+      const n = new Notification('New order — ' + (o.orderNumber || o.id), {
+        body: itemsSummary + (o.total ? (' · ₹' + o.total) : ''),
+        icon: 'icon-192.png',
+        tag: 'order-' + o.id
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    }catch(e){ console.error('Notification failed:', e); }
+  }
+
+  // ---- Live orders: listens on this restaurant's orders node so new
+  // orders placed from the customer app pop up here instantly ----
+  function listenForOrders(){
+    const { db, ref, onValue } = window.fb;
+    let firstSnapshot = true;
+    onValue(ref(db, 'restaurants/' + current.id + '/orders'), (snapshot) => {
+      const all = [];
+      snapshot.forEach(child => all.push({ id: child.key, ...child.val() }));
+      all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      orders = all;
+      renderOrdersList();
+
+      all.filter(o => o.status === 'pending').forEach(o => {
+        if(!alertedOrderIds.has(o.id)){
+          alertedOrderIds.add(o.id);
+          pendingAlertQueue.push(o);
+          // Only fire the system/phone notification for orders that arrive
+          // while actively listening — not for the batch of already-pending
+          // orders shown right after login (those get the in-app popup only).
+          if(!firstSnapshot) notifyNewOrder(o);
+        }
+      });
+      showNextOrderAlert();
+      firstSnapshot = false;
+    });
+  }
+
+  function renderOrdersList(){
+    const list = document.getElementById('orders-list');
+    const empty = document.getElementById('orders-empty');
+    list.innerHTML = '';
+    if(orders.length === 0){
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    orders.slice(0, 15).forEach(o => {
+      const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
+      const row = document.createElement('div');
+      row.className = 'order-row';
+      row.innerHTML = `
+        <div class="order-row-top">
+          <span class="order-row-num">${o.orderNumber || o.id}</span>
+          <span class="order-badge ${o.status}">${o.status}</span>
+        </div>
+        <p class="order-row-items">${itemsSummary}</p>
+        <div class="order-row-bottom">
+          <span class="order-row-total">${(o.total || 0).toFixed(2)}</span>
+          ${o.status === 'pending' ? `
+            <span class="order-row-actions">
+              <button class="mini-reject" onclick="rejectOrderById('${o.id}')">Reject</button>
+              <button class="mini-accept" onclick="acceptOrderById('${o.id}')">Accept</button>
+            </span>` : ''}
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  function showNextOrderAlert(){
+    if(currentAlertOrder || pendingAlertQueue.length === 0) return;
+    // Skip any that got accepted/rejected elsewhere (e.g. from the list) before their turn
+    let next = pendingAlertQueue.shift();
+    const live = orders.find(o => o.id === next.id);
+    if(!live || live.status !== 'pending'){
+      showNextOrderAlert();
+      return;
+    }
+    currentAlertOrder = live;
+    renderOrderAlert(live);
+    document.getElementById('order-alert-overlay').classList.add('active');
+    startAlertSound();
+  }
+
+  function renderOrderAlert(o){
+    document.getElementById('alert-order-num').textContent = o.orderNumber || o.id;
+    document.getElementById('alert-customer-name').textContent = o.customerName || 'Guest';
+    document.getElementById('alert-customer-address').textContent = o.customerAddress || '';
+    document.getElementById('alert-customer-phone').textContent = o.customerPhone || '';
+    const itemsEl = document.getElementById('alert-items');
+    itemsEl.innerHTML = (o.items || []).map(it => `
+      <div class="oa-item-row">
+        <span class="oa-item-name"><span class="oa-item-qty">${it.qty}×</span> ${it.name}</span>
+        <span>₹${(it.price * it.qty).toFixed(2)}</span>
+      </div>
+    `).join('');
+    document.getElementById('alert-total').textContent = '₹' + (o.total || 0).toFixed(2);
+  }
+
+  function closeAlertOverlay(){
+    stopAlertSound();
+    document.getElementById('order-alert-overlay').classList.remove('active');
+    currentAlertOrder = null;
+    showNextOrderAlert();
+  }
+
+  async function acceptOrder(){
+    if(!currentAlertOrder) return;
+    await setOrderStatus(currentAlertOrder.id, 'accepted');
+    showToast('Order accepted: ' + (currentAlertOrder.orderNumber || ''));
+    closeAlertOverlay();
+  }
+
+  async function rejectOrder(){
+    if(!currentAlertOrder) return;
+    await setOrderStatus(currentAlertOrder.id, 'rejected');
+    showToast('Order rejected');
+    closeAlertOverlay();
+  }
+
+  async function acceptOrderById(id){
+    await setOrderStatus(id, 'accepted');
+    showToast('Order accepted');
+    if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
+  }
+
+  async function rejectOrderById(id){
+    await setOrderStatus(id, 'rejected');
+    showToast('Order rejected');
+    if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
+  }
+
+  async function setOrderStatus(id, status){
+    const { db, ref, update } = window.fb;
+    await update(ref(db, 'restaurants/' + current.id + '/orders/' + id), {
+      status, [status + 'At']: Date.now()
+    });
+  }
+
+  function logout(){
+    current = null;
+    orders = [];
+    alertedOrderIds = new Set();
+    pendingAlertQueue = [];
+    stopAlertSound();
+    document.getElementById('order-alert-overlay').classList.remove('active');
+    currentAlertOrder = null;
+    document.getElementById('li-username').value = '';
+    document.getElementById('li-password').value = '';
+    showScreen('welcome');
+  }
+
+  function renderSales(){
+    document.getElementById('sales-total').textContent = totalSales.toFixed(2);
+    document.getElementById('sales-count').textContent = saleCount + (saleCount === 1 ? " order recorded" : " orders recorded");
+  }
+
+  function renderItems(){
+    const grid = document.getElementById('items-grid');
+    const empty = document.getElementById('empty-state');
+    grid.innerHTML = '';
+    if(items.length === 0){
+      empty.style.display = 'block';
+      grid.style.display = 'none';
+      return;
+    }
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    items.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'item-card';
+      card.innerHTML = `
+        <div class="item-photo">
+          ${item.photo
+            ? `<img src="${item.photo}" alt="${item.name}" />`
+            : `<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FC801955" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`
+          }
+          <button class="item-del" onclick="removeItem('${item.id}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6"/></svg>
+          </button>
+        </div>
+        <div class="item-info">
+          <div class="item-name">${item.name}</div>
+          <div class="item-price">${item.price.toFixed(2)}</div>
+          <button class="record-sale-btn" onclick="recordSale('${item.id}')">Record sale</button>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  async function removeItem(id){
+    items = items.filter(i => i.id !== id);
+    renderItems();
+    const { db, ref, remove } = window.fb;
+    await remove(ref(db, 'restaurants/' + current.id + '/menu/' + id));
+  }
+
+  async function recordSale(id){
+    const item = items.find(i => i.id === id);
+    if(!item) return;
+    totalSales += item.price;
+    saleCount += 1;
+    renderSales();
+    showToast("Sale recorded: " + item.name);
+    const { db, ref, update } = window.fb;
+    await update(ref(db, 'restaurants/' + current.id), { totalSales, saleCount });
+  }
+
+  function openModal(){
+    document.getElementById('modal-overlay').classList.add('active');
+  }
+  function closeModal(){
+    document.getElementById('modal-overlay').classList.remove('active');
+    document.getElementById('item-name').value = '';
+    document.getElementById('item-price').value = '';
+    newItemPhoto = null;
+    document.getElementById('photo-picker').innerHTML = `
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#FC8019" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <span>Add photo</span>
+    `;
+  }
+
+  function handlePhotoPick(e){
+    const file = e.target.files && e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      newItemPhoto = reader.result;
+      document.getElementById('photo-picker').innerHTML = `<img src="${newItemPhoto}" alt="preview" />`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  async function handleAddItem(e){
+    e.preventDefault();
+    const name = document.getElementById('item-name').value.trim();
+    const price = parseFloat(document.getElementById('item-price').value);
+    if(!name || isNaN(price)) return;
+    const { db, ref, push, set } = window.fb;
+    const newRef = push(ref(db, 'restaurants/' + current.id + '/menu'));
+    const itemData = { name, price, photo: newItemPhoto };
+    await set(newRef, itemData);
+    items.push({ id: newRef.key, ...itemData });
+    closeModal();
+    renderItems();
+  }
+
+  // ---------- PWA: register service worker ----------
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(err => console.error('SW registration failed:', err));
+    });
+  }
+</script>
+
+</body>
+</html>
