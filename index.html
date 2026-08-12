@@ -437,6 +437,9 @@
         <p style="color:var(--grey); font-size:.7rem; font-weight:600; margin:0 0 2px;">WELCOME BACK</p>
         <h1 id="home-restaurant-name">Restaurant</h1>
       </div>
+      <button class="icon-btn" onclick="showYourOrders()" title="Your Orders">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </button>
       <button class="icon-btn" onclick="showDebugLog()" title="Debug">🐞</button>
       <button class="icon-btn" onclick="logout()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
@@ -457,7 +460,7 @@
       </div>
 
       <div class="section-head">
-        <h2>Orders</h2>
+        <h2>Orders in progress</h2>
       </div>
       <div class="empty-state" id="orders-empty">
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FC8019" stroke-width="2" style="margin:0 auto;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
@@ -479,6 +482,26 @@
       </div>
 
       <div class="items-grid" id="items-grid"></div>
+    </div>
+  </div>
+
+  <!-- YOUR ORDERS (completed order history) -->
+  <div class="screen" id="screen-your-orders">
+    <div class="topbar">
+      <div>
+        <p style="color:var(--grey); font-size:.7rem; font-weight:600; margin:0 0 2px;">HISTORY</p>
+        <h1>Your Orders</h1>
+      </div>
+      <button class="icon-btn" onclick="showScreen('home')">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="home-body">
+      <div class="empty-state" id="your-orders-empty">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#FC8019" stroke-width="2" style="margin:0 auto;"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <p>No completed orders yet.</p>
+      </div>
+      <div class="orders-list" id="your-orders-list"></div>
     </div>
   </div>
 
@@ -538,8 +561,7 @@
         </div>
       </div>
       <div class="order-alert-actions">
-        <button class="btn-reject" onclick="rejectOrder()">Reject</button>
-        <button class="btn-accept" onclick="acceptOrder()">Accept order</button>
+        <button class="btn-accept" style="width:100%;" onclick="dismissOrderAlert()">OK, got it</button>
       </div>
     </div>
   </div>
@@ -784,15 +806,25 @@
 
   // ---- Live orders: listens on this restaurant's orders node so new
   // orders placed from the customer app pop up here instantly ----
+  window.addEventListener('error', function(e){
+    debugLog('JS ERROR: ' + e.message + ' (line ' + e.lineno + ')');
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    debugLog('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+
   function listenForOrders(){
+    debugLog('listenForOrders started for restaurant id: ' + current.id);
     const { db, ref, onValue } = window.fb;
     let firstSnapshot = true;
     onValue(ref(db, 'restaurants/' + current.id + '/orders'), (snapshot) => {
       const all = [];
       snapshot.forEach(child => all.push({ id: child.key, ...child.val() }));
+      debugLog('onValue fired, ' + all.length + ' orders in snapshot');
       all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
       orders = all;
       renderOrdersList();
+      renderYourOrdersList();
 
       all.filter(o => o.status === 'pending').forEach(o => {
         if(!alertedOrderIds.has(o.id)){
@@ -813,46 +845,78 @@
     const list = document.getElementById('orders-list');
     const empty = document.getElementById('orders-empty');
     list.innerHTML = '';
-    // Completed orders are done and shouldn't clutter the live orders list.
+    // In-progress orders are anything not yet marked completed — there's no
+    // separate accept/reject step anymore, every new order is immediately
+    // "in progress" until the restaurant marks it done.
     const visibleOrders = orders.filter(o => o.status !== 'completed');
     if(visibleOrders.length === 0){
       empty.style.display = 'block';
       return;
     }
     empty.style.display = 'none';
-    visibleOrders.slice(0, 15).forEach(o => {
+    // No cap — show every in-progress order, however many there are.
+    visibleOrders.forEach(o => {
       const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
       const row = document.createElement('div');
       row.className = 'order-row';
       row.innerHTML = `
         <div class="order-row-top">
           <span class="order-row-num">${o.orderNumber || o.id}</span>
-          <span class="order-badge ${o.status}">${o.status}</span>
+          <span class="order-badge pending">in progress</span>
         </div>
         <p class="order-row-items">${itemsSummary}</p>
         <div class="order-row-bottom">
           <span class="order-row-total">${(o.total || 0).toFixed(2)}</span>
-          ${o.status === 'pending' ? `
-            <span class="order-row-actions">
-              <button class="mini-reject" onclick="rejectOrderById('${o.id}')">Reject</button>
-              <button class="mini-accept" onclick="acceptOrderById('${o.id}')">Accept</button>
-            </span>` : ''}
-          ${o.status === 'accepted' ? `
-            <span class="order-row-actions">
-              <button class="mini-accept" onclick="completeOrderById('${o.id}')">Order completed</button>
-            </span>` : ''}
+          <span class="order-row-actions">
+            <button class="mini-accept" onclick="completeOrderById('${o.id}')">Order completed</button>
+          </span>
         </div>
       `;
       list.appendChild(row);
     });
   }
 
+  function renderYourOrdersList(){
+    const list = document.getElementById('your-orders-list');
+    const empty = document.getElementById('your-orders-empty');
+    if(!list || !empty) return;
+    list.innerHTML = '';
+    const completedOrders = orders.filter(o => o.status === 'completed')
+      .sort((a, b) => (b.completedAt || 0) - (a.completedAt || 0));
+    if(completedOrders.length === 0){
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+    completedOrders.forEach(o => {
+      const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
+      const row = document.createElement('div');
+      row.className = 'order-row';
+      row.innerHTML = `
+        <div class="order-row-top">
+          <span class="order-row-num">${o.orderNumber || o.id}</span>
+          <span class="order-badge completed">completed</span>
+        </div>
+        <p class="order-row-items">${itemsSummary}</p>
+        <div class="order-row-bottom">
+          <span class="order-row-total">${(o.total || 0).toFixed(2)}</span>
+        </div>
+      `;
+      list.appendChild(row);
+    });
+  }
+
+  window.showYourOrders = function(){
+    renderYourOrdersList();
+    showScreen('your-orders');
+  };
+
   function showNextOrderAlert(){
     if(currentAlertOrder || pendingAlertQueue.length === 0) return;
-    // Skip any that got accepted/rejected elsewhere (e.g. from the list) before their turn
+    // Skip any that already got marked completed elsewhere before their turn
     let next = pendingAlertQueue.shift();
     const live = orders.find(o => o.id === next.id);
-    if(!live || live.status !== 'pending'){
+    if(!live || live.status === 'completed'){
       showNextOrderAlert();
       return;
     }
@@ -884,42 +948,27 @@
     showNextOrderAlert();
   }
 
-  async function acceptOrder(){
-    if(!currentAlertOrder) return;
-    await setOrderStatus(currentAlertOrder.id, 'accepted');
-    showToast('Order accepted: ' + (currentAlertOrder.orderNumber || ''));
+  window.dismissOrderAlert = function(){
     closeAlertOverlay();
-  }
+  };
 
-  async function rejectOrder(){
-    if(!currentAlertOrder) return;
-    await setOrderStatus(currentAlertOrder.id, 'rejected');
-    showToast('Order rejected');
-    closeAlertOverlay();
-  }
-
-  async function acceptOrderById(id){
-    await setOrderStatus(id, 'accepted');
-    showToast('Order accepted');
-    if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
-  }
-
-  async function rejectOrderById(id){
-    await setOrderStatus(id, 'rejected');
-    showToast('Order rejected');
-    if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
-  }
-
+  // Marks an order done AND records it as a sale in one step — adds the
+  // order's total to Total Sales / orders-recorded count, same as the
+  // existing manual "Record sale" button on menu items.
   async function completeOrderById(id){
-    await setOrderStatus(id, 'completed');
-    showToast('Order marked as completed');
-  }
-
-  async function setOrderStatus(id, status){
+    const order = orders.find(o => o.id === id);
     const { db, ref, update } = window.fb;
     await update(ref(db, 'restaurants/' + current.id + '/orders/' + id), {
-      status, [status + 'At']: Date.now()
+      status: 'completed', completedAt: Date.now()
     });
+    if(order){
+      totalSales += (order.total || 0);
+      saleCount += 1;
+      renderSales();
+      await update(ref(db, 'restaurants/' + current.id), { totalSales, saleCount });
+    }
+    showToast('Order completed — sale recorded');
+    if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
   }
 
   function logout(){
