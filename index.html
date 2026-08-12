@@ -1097,8 +1097,13 @@
   }
 
   // ---------- Init: try to resume a previous session so the app doesn't
-  // require logging in again every time it's closed and reopened ----------
-  tryAutoLogin();
+  // require logging in again every time it's closed and reopened.
+  // Run on window 'load' so the type="module" Firebase script above
+  // (which sets window.fb) has definitely finished — module scripts are
+  // deferred and can otherwise run AFTER this plain script block. ----------
+  window.addEventListener('load', () => {
+    tryAutoLogin();
+  });
 
   // ---------- PWA: register service worker ----------
   if ('serviceWorker' in navigator) {
