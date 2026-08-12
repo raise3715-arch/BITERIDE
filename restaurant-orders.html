@@ -56,6 +56,13 @@
   .detail-label{ color:#5C574C; font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; margin:0 0 4px; text-transform:uppercase; }
   .detail-value{ color:var(--ink); font-size:14px; margin:0 0 14px; }
   .detail-value:last-child{ margin-bottom:0; }
+  .detail-phone-link{
+    display:inline-flex; align-items:center; gap:6px; color:var(--leaf) !important;
+    text-decoration:none; font-weight:700;
+  }
+  .detail-phone-link::before{
+    content:"📞"; font-size:13px;
+  }
   .item-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ink); padding:4px 0; }
   .item-row-total{ border-top:1px dashed var(--ink); margin-top:8px; padding-top:8px; font-weight:700; }
 
@@ -159,9 +166,11 @@
       <p class="detail-label">Customer</p>
       <p class="detail-value" id="detail-cust-name"></p>
       <p class="detail-label">Phone</p>
-      <p class="detail-value" id="detail-cust-phone"></p>
+      <a class="detail-value detail-phone-link" id="detail-cust-phone" href="tel:"></a>
       <p class="detail-label">Delivery address</p>
       <p class="detail-value" id="detail-cust-address"></p>
+      <p class="detail-label" id="detail-landmark-label" style="display:none;">Landmark</p>
+      <p class="detail-value" id="detail-cust-landmark" style="display:none;"></p>
       <button class="detail-map-btn" id="detail-map-btn" style="display:none;">📍 Open location on map</button>
     </div>
 
@@ -250,7 +259,20 @@ function stopRinging() {
 
 function showNewOrderPopup(order) {
   document.getElementById('popup-order-num').textContent = order.orderNumber || 'New order';
-  document.getElementById('popup-cust').textContent = (order.customerName || 'Guest') + " · " + (order.customerAddress || '');
+  const popupCustBits = [order.customerName || 'Guest', order.customerAddress, order.customerLandmark].filter(Boolean);
+  const popupCustEl = document.getElementById('popup-cust');
+  popupCustEl.innerHTML = "";
+  popupCustEl.append(popupCustBits.join(" · "));
+  if (order.customerPhone) {
+    const sep = document.createTextNode(" · ");
+    const phoneLink = document.createElement('a');
+    phoneLink.href = "tel:" + order.customerPhone;
+    phoneLink.textContent = order.customerPhone;
+    phoneLink.style.color = "var(--leaf)";
+    phoneLink.style.fontWeight = "700";
+    phoneLink.style.textDecoration = "none";
+    popupCustEl.append(sep, phoneLink);
+  }
   const itemsEl = document.getElementById('popup-items');
   itemsEl.innerHTML = "";
   (order.items || []).forEach(it => {
@@ -379,8 +401,26 @@ function renderDetail(o) {
   document.getElementById('detail-order-num').textContent = o.orderNumber || o.id;
   document.getElementById('detail-status-title').textContent = (o.status || 'pending').charAt(0).toUpperCase() + (o.status || 'pending').slice(1);
   document.getElementById('detail-cust-name').textContent = o.customerName || 'Guest';
-  document.getElementById('detail-cust-phone').textContent = o.customerPhone || '—';
+  const phoneLink = document.getElementById('detail-cust-phone');
+  if (o.customerPhone) {
+    phoneLink.textContent = o.customerPhone;
+    phoneLink.href = "tel:" + o.customerPhone;
+  } else {
+    phoneLink.textContent = '—';
+    phoneLink.removeAttribute('href');
+  }
   document.getElementById('detail-cust-address').textContent = [o.customerAddress, o.customerLocation].filter(Boolean).join(', ') || '—';
+
+  const landmarkLabel = document.getElementById('detail-landmark-label');
+  const landmarkValue = document.getElementById('detail-cust-landmark');
+  if (o.customerLandmark) {
+    landmarkLabel.style.display = "block";
+    landmarkValue.style.display = "block";
+    landmarkValue.textContent = o.customerLandmark;
+  } else {
+    landmarkLabel.style.display = "none";
+    landmarkValue.style.display = "none";
+  }
 
   const mapBtn = document.getElementById('detail-map-btn');
   const mapUrl = buildMapUrl(o);
