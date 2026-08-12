@@ -713,6 +713,7 @@
     showScreen('home');
     requestNotificationPermission();
     watchConnectionState();
+    refreshOrdersOnce();
     listenForOrders();
   }
 
@@ -787,6 +788,17 @@
     }
   });
 
+  // Fires when the app is resumed after being backgrounded/suspended by the
+  // OS (common on mobile when the app was "closed" via home button/recent
+  // apps and reopened) — more reliable than visibilitychange alone for
+  // catching orders that were placed while the app was fully inactive.
+  window.addEventListener('pageshow', () => {
+    if(current){
+      debugLog('pageshow — forcing a fresh orders fetch');
+      refreshOrdersOnce();
+    }
+  });
+
   async function refreshOrdersOnce(){
     if(!current) return;
     try{
@@ -811,8 +823,20 @@
 
   function watchConnectionState(){
     const { db, ref, onValue } = window.fb;
+    let wasConnected = null;
     onValue(ref(db, '.info/connected'), (snap) => {
-      debugLog('Firebase connection: ' + (snap.val() ? 'CONNECTED' : 'DISCONNECTED'));
+      const isConnected = !!snap.val();
+      debugLog('Firebase connection: ' + (isConnected ? 'CONNECTED' : 'DISCONNECTED'));
+      // If we just came back online after a real disconnect, the onValue
+      // listener on /orders may resume silently without re-delivering data
+      // that arrived while offline (seen in the wild on flaky mobile
+      // networks). Force one fresh fetch as a safety net whenever we
+      // transition from disconnected -> connected.
+      if (isConnected && wasConnected === false) {
+        debugLog('reconnected — forcing a fresh orders fetch');
+        refreshOrdersOnce();
+      }
+      wasConnected = isConnected;
     });
   }
 
