@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Your Orders</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1C1B19;
+    --marigold:#E8A33D;
+    --chili:#C1432E;
+    --leaf:#3F6B4F;
+    --cloud:#F7F3EA;
+    --muted:#B8B0A2;
+    --muted-2:#6E695F;
+    --field-bg:#25231F;
+    --field-border:#3A3733;
+  }
+  *{box-sizing:border-box;}
+  body{ margin:0; background:var(--ink); font-family:'Inter',sans-serif; display:flex; justify-content:center; min-height:100vh; }
+  #app{ width:100%; max-width:420px; min-height:100vh; background:var(--ink); position:relative; }
+  .screen{ display:none; padding-bottom:24px; }
+  .screen.active{ display:block; }
+
+  .top-row{ padding:32px 24px 8px; display:flex; align-items:center; gap:12px; }
+  .btn-back{ background:none; border:none; color:var(--marigold); cursor:pointer; padding:0; display:flex; }
+  .eyebrow{ color:var(--marigold); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; margin:0; }
+  .title{ color:var(--cloud); font-family:'Fraunces',serif; font-size:24px; font-weight:700; margin:2px 0 0; }
+
+  .order-list{ padding:20px 24px 40px; display:flex; flex-direction:column; gap:12px; }
+  .chit{ background:var(--cloud); border-radius:10px; padding:14px; cursor:pointer; border:none; width:100%; text-align:left; font-family:'Inter',sans-serif; }
+  .order-top{ display:flex; align-items:center; justify-content:space-between; }
+  .order-num{ color:var(--ink); font-weight:700; font-family:'IBM Plex Mono',monospace; font-size:14px; margin:0; }
+  .order-time{ color:#5C574C; font-size:11px; margin:2px 0 0; }
+  .order-mid{ display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+  .order-cust{ color:#3a3733; font-size:13px; margin:0; }
+  .order-total{ color:var(--ink); font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:14px; margin:0; }
+
+  .pill{
+    display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+    font-family:'IBM Plex Mono',monospace; letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .pill-pending{ background:#F3D9AE; color:#8A5A0F; }
+  .pill-preparing{ background:#CFE0D6; color:#2C4A37; }
+  .pill-ready{ background:#BFE3F0; color:#1C5A70; }
+  .pill-delivered{ background:#D6D0C4; color:#4A463D; }
+  .pill-cancelled{ background:#EFC3BA; color:#7A2A1D; }
+
+  .empty-text{ color:var(--muted-2); font-size:14px; padding:0 24px; }
+
+  /* Detail screen */
+  .detail-header{ padding:32px 24px 0; }
+  .detail-block{ margin:24px 24px 0; background:var(--cloud); border-radius:12px; padding:18px; }
+  .detail-label{ color:#5C574C; font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; margin:0 0 4px; text-transform:uppercase; }
+  .detail-value{ color:var(--ink); font-size:14px; margin:0 0 14px; }
+  .detail-value:last-child{ margin-bottom:0; }
+  .item-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ink); padding:4px 0; }
+  .item-row-total{ border-top:1px dashed var(--ink); margin-top:8px; padding-top:8px; font-weight:700; }
+
+  .status-actions{ padding:20px 24px 0; display:flex; flex-direction:column; gap:10px; }
+  .status-btn{
+    width:100%; padding:14px; border:none; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .status-btn.preparing{ background:var(--leaf); color:var(--cloud); }
+  .status-btn.ready{ background:#3A8FB0; color:var(--cloud); }
+  .status-btn.delivered{ background:var(--marigold); color:var(--ink); }
+  .status-btn.cancel{ background:transparent; border:1.5px solid var(--chili); color:var(--chili); }
+
+  .toast{
+    position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:999;
+    background:var(--leaf); color:var(--cloud); padding:14px 18px; border-radius:10px;
+    font-size:14px; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.3); max-width:380px; width:calc(100% - 32px);
+    display:none; text-align:center;
+  }
+  .toast.show{ display:block; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="toast" id="toast"></div>
+
+  <!-- ORDER LIST -->
+  <section class="screen active" id="screen-list">
+    <div class="top-row">
+      <button class="btn-back" onclick="window.location.href='restaurant-index.html'">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div>
+        <p class="eyebrow">ORDERS</p>
+        <h1 class="title">Your Orders</h1>
+      </div>
+    </div>
+    <div class="order-list" id="order-list"></div>
+  </section>
+
+  <!-- ORDER DETAIL -->
+  <section class="screen" id="screen-detail">
+    <div class="top-row">
+      <button class="btn-back" onclick="showScreen('list')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div>
+        <p class="eyebrow" id="detail-order-num">ORDER</p>
+        <h1 class="title" id="detail-status-title">Details</h1>
+      </div>
+    </div>
+
+    <div class="detail-block">
+      <p class="detail-label">Customer</p>
+      <p class="detail-value" id="detail-cust-name"></p>
+      <p class="detail-label">Phone</p>
+      <p class="detail-value" id="detail-cust-phone"></p>
+      <p class="detail-label">Delivery address</p>
+      <p class="detail-value" id="detail-cust-address"></p>
+    </div>
+
+    <div class="detail-block">
+      <p class="detail-label">Items</p>
+      <div id="detail-items"></div>
+      <div class="item-row item-row-total">
+        <span>Total</span>
+        <span id="detail-total"></span>
+      </div>
+    </div>
+
+    <div class="status-actions" id="status-actions"></div>
+  </section>
+
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrM5wKwsnGtIc7HSTk_5R1d3dXEcYyd7o",
+    authDomain: "texi-and-food.firebaseapp.com",
+    databaseURL: "https://texi-and-food-default-rtdb.firebaseio.com",
+    projectId: "texi-and-food",
+    storageBucket: "texi-and-food.firebasestorage.app",
+    messagingSenderId: "98800730432",
+    appId: "1:98800730432:web:9d7651e792c60baafabaa5"
+  };
+
+  const fbApp = initializeApp(firebaseConfig);
+  const db = getDatabase(fbApp);
+  window.fb = { db, ref, onValue, update };
+  window.dispatchEvent(new Event('fb-ready'));
+</script>
+
+<script>
+let restId = localStorage.getItem('asfood_partner_id');
+let orders = [];
+let selectedOrderId = null;
+let knownOrderIds = null;
+
+if (!restId) {
+  window.location.href = 'restaurant-index.html';
+}
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
+    o.start();
+    o.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    o.stop(ctx.currentTime + 0.4);
+  } catch (e) {}
+}
+
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff / 60) + " min ago";
+  if (diff < 86400) return Math.floor(diff / 3600) + " hr ago";
+  return new Date(ts).toLocaleDateString();
+}
+
+function pillClass(status) {
+  return "pill pill-" + (status || "pending");
+}
+
+window.addEventListener('fb-ready', () => {
+  const { db, ref, onValue } = window.fb;
+  onValue(ref(db, 'restaurants/' + restId + '/orders'), snap => {
+    const list = [];
+    const currentIds = new Set();
+    snap.forEach(child => {
+      currentIds.add(child.key);
+      list.push({ id: child.key, ...child.val() });
+    });
+    list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    orders = list;
+    renderList();
+
+    if (knownOrderIds !== null) {
+      currentIds.forEach(id => {
+        if (!knownOrderIds.has(id)) { beep(); showToast("🔔 New order received!"); }
+      });
+    }
+    knownOrderIds = currentIds;
+
+    if (selectedOrderId) {
+      const updated = list.find(o => o.id === selectedOrderId);
+      if (updated) renderDetail(updated);
+    }
+  });
+});
+
+function renderList() {
+  const el = document.getElementById('order-list');
+  el.innerHTML = "";
+  if (orders.length === 0) {
+    const p = document.createElement('p');
+    p.className = "empty-text";
+    p.textContent = "No orders yet. New orders from customers will show up here.";
+    el.appendChild(p);
+    return;
+  }
+  orders.forEach(o => {
+    const itemCount = (o.items || []).reduce((s, it) => s + (it.qty || 0), 0);
+    const btn = document.createElement('button');
+    btn.className = "chit";
+    btn.innerHTML = `
+      <div class="order-top">
+        <p class="order-num">${o.orderNumber || o.id}</p>
+        <span class="${pillClass(o.status)}">${o.status || 'pending'}</span>
+      </div>
+      <p class="order-time">${timeAgo(o.createdAt || Date.now())} · ${itemCount} item${itemCount === 1 ? '' : 's'}</p>
+      <div class="order-mid">
+        <p class="order-cust">${o.customerName || 'Guest'}</p>
+        <p class="order-total">₹${o.total || 0}</p>
+      </div>
+    `;
+    btn.addEventListener('click', () => openDetail(o.id));
+    el.appendChild(btn);
+  });
+}
+
+function openDetail(id) {
+  selectedOrderId = id;
+  const o = orders.find(x => x.id === id);
+  if (!o) return;
+  renderDetail(o);
+  showScreen('detail');
+}
+
+function renderDetail(o) {
+  document.getElementById('detail-order-num').textContent = o.orderNumber || o.id;
+  document.getElementById('detail-status-title').textContent = (o.status || 'pending').charAt(0).toUpperCase() + (o.status || 'pending').slice(1);
+  document.getElementById('detail-cust-name').textContent = o.customerName || 'Guest';
+  document.getElementById('detail-cust-phone').textContent = o.customerPhone || '—';
+  document.getElementById('detail-cust-address').textContent = [o.customerAddress, o.customerLocation].filter(Boolean).join(', ') || '—';
+
+  const itemsEl = document.getElementById('detail-items');
+  itemsEl.innerHTML = "";
+  (o.items || []).forEach(it => {
+    const row = document.createElement('div');
+    row.className = "item-row";
+    row.innerHTML = `<span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span>`;
+    itemsEl.appendChild(row);
+  });
+  document.getElementById('detail-total').textContent = "₹" + (o.total || 0);
+
+  const actionsEl = document.getElementById('status-actions');
+  actionsEl.innerHTML = "";
+  const status = o.status || 'pending';
+  const buttons = [];
+  if (status === 'pending') buttons.push({ label: 'Accept & start preparing', cls: 'preparing', next: 'preparing' });
+  if (status === 'preparing') buttons.push({ label: 'Mark as ready', cls: 'ready', next: 'ready' });
+  if (status === 'ready') buttons.push({ label: 'Mark as delivered', cls: 'delivered', next: 'delivered' });
+  if (status !== 'delivered' && status !== 'cancelled') buttons.push({ label: 'Cancel order', cls: 'cancel', next: 'cancelled' });
+
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = "status-btn " + b.cls;
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => updateStatus(o.id, b.next));
+    actionsEl.appendChild(btn);
+  });
+}
+
+async function updateStatus(id, newStatus) {
+  try {
+    const { db, ref, update } = window.fb;
+    await update(ref(db, 'restaurants/' + restId + '/orders/' + id), { status: newStatus });
+    showToast("Order marked as " + newStatus);
+  } catch (e) {
+    alert("Couldn't update order — check your connection and try again.");
+  }
+}
+</script>
+</body>
+</html>
