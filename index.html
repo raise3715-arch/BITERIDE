@@ -722,13 +722,44 @@
     renderItems();
     renderSales();
     showScreen('home');
+    requestNotificationPermission();
     listenForOrders();
+  }
+
+  // ---- Ask for system-notification permission so new-order alerts can still
+  // show up as a phone notification while the app is minimized/backgrounded
+  // (tab must still be open in memory — this is not a full push notification,
+  // so it won't fire once the app/tab is fully closed by the OS) ----
+  function requestNotificationPermission(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission === 'default'){
+      Notification.requestPermission();
+    }
+  }
+
+  // ---- Shows a system notification for a new order when the app is not
+  // the active/visible tab. If the tab is visible, the in-app popup + sound
+  // (showNextOrderAlert) is enough, so we skip the duplicate system alert.
+  function notifyNewOrder(o){
+    if(!('Notification' in window)) return;
+    if(Notification.permission !== 'granted') return;
+    if(document.visibilityState === 'visible') return;
+    try{
+      const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
+      const n = new Notification('New order — ' + (o.orderNumber || o.id), {
+        body: itemsSummary + (o.total ? (' · ₹' + o.total) : ''),
+        icon: 'icon-192.png',
+        tag: 'order-' + o.id
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    }catch(e){ console.error('Notification failed:', e); }
   }
 
   // ---- Live orders: listens on this restaurant's orders node so new
   // orders placed from the customer app pop up here instantly ----
   function listenForOrders(){
     const { db, ref, onValue } = window.fb;
+    let firstSnapshot = true;
     onValue(ref(db, 'restaurants/' + current.id + '/orders'), (snapshot) => {
       const all = [];
       snapshot.forEach(child => all.push({ id: child.key, ...child.val() }));
@@ -740,9 +771,14 @@
         if(!alertedOrderIds.has(o.id)){
           alertedOrderIds.add(o.id);
           pendingAlertQueue.push(o);
+          // Only fire the system/phone notification for orders that arrive
+          // while actively listening — not for the batch of already-pending
+          // orders shown right after login (those get the in-app popup only).
+          if(!firstSnapshot) notifyNewOrder(o);
         }
       });
       showNextOrderAlert();
+      firstSnapshot = false;
     });
   }
 
