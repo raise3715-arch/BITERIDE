@@ -69,6 +69,12 @@
   .status-btn.delivered{ background:var(--marigold); color:var(--ink); }
   .status-btn.cancel{ background:transparent; border:1.5px solid var(--chili); color:var(--chili); }
 
+  .detail-map-btn{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px;
+    border:1.5px solid var(--leaf); background:transparent; color:var(--leaf);
+    font-weight:600; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+
   .toast{
     position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:999;
     background:var(--leaf); color:var(--cloud); padding:14px 18px; border-radius:10px;
@@ -156,6 +162,7 @@
       <p class="detail-value" id="detail-cust-phone"></p>
       <p class="detail-label">Delivery address</p>
       <p class="detail-value" id="detail-cust-address"></p>
+      <button class="detail-map-btn" id="detail-map-btn" style="display:none;">📍 Open location on map</button>
     </div>
 
     <div class="detail-block">
@@ -285,6 +292,22 @@ function pillClass(status) {
   return "pill pill-" + (status || "pending");
 }
 
+// Builds a Google Maps link that opens directly at the customer's correct
+// pinned location. Prefers exact lat/lng saved with the order; falls back
+// to parsing a "lat, lng" string, then to a text search as a last resort.
+function buildMapUrl(o) {
+  if (typeof o.customerLat === 'number' && typeof o.customerLng === 'number') {
+    return `https://www.google.com/maps/search/?api=1&query=${o.customerLat},${o.customerLng}`;
+  }
+  if (o.customerLocation) {
+    const m = String(o.customerLocation).trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+    if (m) return `https://www.google.com/maps/search/?api=1&query=${m[1]},${m[2]}`;
+  }
+  const addr = [o.customerAddress, o.customerLocation].filter(Boolean).join(', ');
+  if (addr) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
+  return null;
+}
+
 window.addEventListener('fb-ready', () => {
   const { db, ref, onValue } = window.fb;
   onValue(ref(db, 'restaurants/' + restId + '/orders'), snap => {
@@ -358,6 +381,16 @@ function renderDetail(o) {
   document.getElementById('detail-cust-name').textContent = o.customerName || 'Guest';
   document.getElementById('detail-cust-phone').textContent = o.customerPhone || '—';
   document.getElementById('detail-cust-address').textContent = [o.customerAddress, o.customerLocation].filter(Boolean).join(', ') || '—';
+
+  const mapBtn = document.getElementById('detail-map-btn');
+  const mapUrl = buildMapUrl(o);
+  if (mapUrl) {
+    mapBtn.style.display = "inline-flex";
+    mapBtn.onclick = () => window.open(mapUrl, '_blank');
+  } else {
+    mapBtn.style.display = "none";
+    mapBtn.onclick = null;
+  }
 
   const itemsEl = document.getElementById('detail-items');
   itemsEl.innerHTML = "";
