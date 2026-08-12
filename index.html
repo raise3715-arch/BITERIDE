@@ -437,6 +437,7 @@
         <p style="color:var(--grey); font-size:.7rem; font-weight:600; margin:0 0 2px;">WELCOME BACK</p>
         <h1 id="home-restaurant-name">Restaurant</h1>
       </div>
+      <button class="icon-btn" onclick="showDebugLog()" title="Debug">🐞</button>
       <button class="icon-btn" onclick="logout()">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
       </button>
@@ -743,13 +744,29 @@
   // because Android Chrome silently fails/ignores the direct constructor
   // for installed (standalone) PWAs — only the service worker API is
   // reliably supported there.
+  function debugLog(msg){
+    try{
+      const logs = JSON.parse(localStorage.getItem('notif_debug') || '[]');
+      logs.push(new Date().toLocaleTimeString() + ' — ' + msg);
+      localStorage.setItem('notif_debug', JSON.stringify(logs.slice(-20)));
+    }catch(e){}
+  }
+
+  window.showDebugLog = function(){
+    const logs = JSON.parse(localStorage.getItem('notif_debug') || '[]');
+    alert(logs.length ? logs.join('\n') : 'No debug logs yet. Notification permission: ' + (('Notification' in window) ? Notification.permission : 'unsupported'));
+  };
+
   function notifyNewOrder(o){
-    if(document.visibilityState === 'visible') return;
-    if(!('Notification' in window) || Notification.permission !== 'granted') return;
-    if(!('serviceWorker' in navigator)) return;
+    debugLog('notifyNewOrder called, visibilityState=' + document.visibilityState);
+    if(document.visibilityState === 'visible'){ debugLog('skipped: tab visible'); return; }
+    if(!('Notification' in window)){ debugLog('skipped: no Notification API'); return; }
+    if(Notification.permission !== 'granted'){ debugLog('skipped: permission=' + Notification.permission); return; }
+    if(!('serviceWorker' in navigator)){ debugLog('skipped: no serviceWorker'); return; }
     const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
     navigator.serviceWorker.ready.then(reg => {
-      reg.showNotification('New order — ' + (o.orderNumber || o.id), {
+      debugLog('calling showNotification for ' + o.id);
+      return reg.showNotification('New order — ' + (o.orderNumber || o.id), {
         body: itemsSummary + (o.total ? (' · ₹' + o.total) : ''),
         icon: 'icon-192.png',
         badge: 'icon-192.png',
@@ -757,7 +774,12 @@
         renotify: true,
         vibrate: [200, 100, 200]
       });
-    }).catch(e => console.error('Notification failed:', e));
+    }).then(() => {
+      debugLog('showNotification resolved OK');
+    }).catch(e => {
+      debugLog('ERROR: ' + (e && e.message ? e.message : e));
+      console.error('Notification failed:', e);
+    });
   }
 
   // ---- Live orders: listens on this restaurant's orders node so new
