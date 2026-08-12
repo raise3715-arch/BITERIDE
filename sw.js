@@ -1,4 +1,4 @@
-const CACHE_NAME = "ruchi-partner-v1";
+const CACHE_NAME = "ruchi-partner-v2";
 const APP_SHELL = ["./index.html", "./manifest.json", "./icon-192.png", "./icon-512.png"];
 
 self.addEventListener("install", (event) => {
@@ -19,6 +19,18 @@ self.addEventListener("activate", (event) => {
 
 // Network-first for navigation (so live data/menus stay fresh),
 // falling back to the cached shell when offline.
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if ("focus" in client) return client.focus();
+      }
+      if (clients.openWindow) return clients.openWindow("./index.html");
+    })
+  );
+});
+
 self.addEventListener("fetch", (event) => {
   const req = event.request;
   if (req.mode === "navigate") {
