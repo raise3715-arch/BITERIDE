@@ -564,6 +564,14 @@
 
 <script>
   // ---- current logged-in restaurant + local UI state ----
+  // ---- TEMPORARY DEBUG: surface any JS error visibly on screen ----
+  window.addEventListener('error', function(e){
+    alert('JS ERROR: ' + e.message + '\n(line ' + e.lineno + ')');
+  });
+  window.addEventListener('unhandledrejection', function(e){
+    alert('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+  });
+
   let current = null;
   let items = [];
   let totalSales = 0;
