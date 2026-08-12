@@ -437,6 +437,9 @@
         <p style="color:var(--grey); font-size:.7rem; font-weight:600; margin:0 0 2px;">WELCOME BACK</p>
         <h1 id="home-restaurant-name">Restaurant</h1>
       </div>
+      <button class="icon-btn" onclick="refreshOrdersOnce()" title="Refresh">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </button>
       <button class="icon-btn" onclick="showYourOrders()" title="Your Orders">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
       </button>
@@ -746,6 +749,7 @@
     renderSales();
     showScreen('home');
     requestNotificationPermission();
+    watchConnectionState();
     listenForOrders();
   }
 
@@ -842,6 +846,13 @@
     }catch(e){
       debugLog('refreshOrdersOnce ERROR: ' + (e && e.message ? e.message : e));
     }
+  }
+
+  function watchConnectionState(){
+    const { db, ref, onValue } = window.fb;
+    onValue(ref(db, '.info/connected'), (snap) => {
+      debugLog('Firebase connection: ' + (snap.val() ? 'CONNECTED' : 'DISCONNECTED'));
+    });
   }
 
   function listenForOrders(){
