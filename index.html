@@ -677,6 +677,7 @@
     items = [];
     totalSales = 0;
     saleCount = 0;
+    saveSession(id);
     enterHome();
   }
 
@@ -703,7 +704,38 @@
     items = found.menu ? Object.keys(found.menu).map(k => ({ id: k, ...found.menu[k] })) : [];
     totalSales = found.totalSales || 0;
     saleCount = found.saleCount || 0;
+    saveSession(found.id);
     enterHome();
+  }
+
+  // ---- Session persistence: remembers which restaurant is logged in
+  // (just the id — never the password) so the app doesn't drop back to the
+  // login screen every time it's fully closed and reopened. ----
+  function saveSession(id){
+    try{ localStorage.setItem('rp_session_id', id); }catch(e){}
+  }
+  function clearSession(){
+    try{ localStorage.removeItem('rp_session_id'); }catch(e){}
+  }
+  async function tryAutoLogin(){
+    let id;
+    try{ id = localStorage.getItem('rp_session_id'); }catch(e){ id = null; }
+    if(!id) return false;
+    try{
+      const { db, ref, get } = window.fb;
+      const snap = await get(ref(db, 'restaurants/' + id));
+      const found = snap.val();
+      if(!found){ clearSession(); return false; }
+      current = found;
+      items = found.menu ? Object.keys(found.menu).map(k => ({ id: k, ...found.menu[k] })) : [];
+      totalSales = found.totalSales || 0;
+      saleCount = found.saleCount || 0;
+      enterHome();
+      return true;
+    }catch(e){
+      debugLog('tryAutoLogin ERROR: ' + (e && e.message ? e.message : e));
+      return false;
+    }
   }
 
   function enterHome(){
@@ -962,6 +994,7 @@
     current = null;
     orders = [];
     alertedOrderIds = new Set();
+    clearSession();
     document.getElementById('li-username').value = '';
     document.getElementById('li-password').value = '';
     showScreen('welcome');
@@ -1062,6 +1095,10 @@
     closeModal();
     renderItems();
   }
+
+  // ---------- Init: try to resume a previous session so the app doesn't
+  // require logging in again every time it's closed and reopened ----------
+  tryAutoLogin();
 
   // ---------- PWA: register service worker ----------
   if ('serviceWorker' in navigator) {
