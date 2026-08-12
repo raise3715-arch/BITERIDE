@@ -813,6 +813,37 @@
     debugLog('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
   });
 
+  document.addEventListener('visibilitychange', () => {
+    if(document.visibilityState === 'visible' && current){
+      debugLog('tab visible again — forcing a fresh orders fetch');
+      refreshOrdersOnce();
+    }
+  });
+
+  async function refreshOrdersOnce(){
+    if(!current) return;
+    try{
+      const { db, ref, get } = window.fb;
+      const snap = await get(ref(db, 'restaurants/' + current.id + '/orders'));
+      const all = [];
+      snap.forEach(child => all.push({ id: child.key, ...child.val() }));
+      debugLog('refreshOrdersOnce: ' + all.length + ' orders fetched');
+      all.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+      orders = all;
+      renderOrdersList();
+      renderYourOrdersList();
+      all.filter(o => o.status === 'pending').forEach(o => {
+        if(!alertedOrderIds.has(o.id)){
+          alertedOrderIds.add(o.id);
+          pendingAlertQueue.push(o);
+        }
+      });
+      showNextOrderAlert();
+    }catch(e){
+      debugLog('refreshOrdersOnce ERROR: ' + (e && e.message ? e.message : e));
+    }
+  }
+
   function listenForOrders(){
     debugLog('listenForOrders started for restaurant id: ' + current.id);
     const { db, ref, onValue } = window.fb;
