@@ -564,14 +564,6 @@
 
 <script>
   // ---- current logged-in restaurant + local UI state ----
-  // ---- TEMPORARY DEBUG: surface any JS error visibly on screen ----
-  window.addEventListener('error', function(e){
-    alert('JS ERROR: ' + e.message + '\n(line ' + e.lineno + ')');
-  });
-  window.addEventListener('unhandledrejection', function(e){
-    alert('PROMISE ERROR: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
-  });
-
   let current = null;
   let items = [];
   let totalSales = 0;
@@ -794,12 +786,14 @@
     const list = document.getElementById('orders-list');
     const empty = document.getElementById('orders-empty');
     list.innerHTML = '';
-    if(orders.length === 0){
+    // Completed orders are done and shouldn't clutter the live orders list.
+    const visibleOrders = orders.filter(o => o.status !== 'completed');
+    if(visibleOrders.length === 0){
       empty.style.display = 'block';
       return;
     }
     empty.style.display = 'none';
-    orders.slice(0, 15).forEach(o => {
+    visibleOrders.slice(0, 15).forEach(o => {
       const itemsSummary = (o.items || []).map(it => it.qty + '× ' + it.name).join(', ');
       const row = document.createElement('div');
       row.className = 'order-row';
@@ -815,6 +809,10 @@
             <span class="order-row-actions">
               <button class="mini-reject" onclick="rejectOrderById('${o.id}')">Reject</button>
               <button class="mini-accept" onclick="acceptOrderById('${o.id}')">Accept</button>
+            </span>` : ''}
+          ${o.status === 'accepted' ? `
+            <span class="order-row-actions">
+              <button class="mini-accept" onclick="completeOrderById('${o.id}')">Order completed</button>
             </span>` : ''}
         </div>
       `;
@@ -883,6 +881,11 @@
     await setOrderStatus(id, 'rejected');
     showToast('Order rejected');
     if(currentAlertOrder && currentAlertOrder.id === id) closeAlertOverlay();
+  }
+
+  async function completeOrderById(id){
+    await setOrderStatus(id, 'completed');
+    showToast('Order marked as completed');
   }
 
   async function setOrderStatus(id, status){
