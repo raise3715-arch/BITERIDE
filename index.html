@@ -72,6 +72,7 @@
   .flex-1{ flex:1; }
   .error-text{ color:var(--chili); font-size:13px; margin:0; }
   .hint-text{ color:var(--muted-2); font-size:12px; margin:0; }
+  .loc-field-label{ color:var(--muted-2); font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; margin:0 0 6px; text-transform:uppercase; }
 
   .top-row{ padding:32px 24px 8px; display:flex; align-items:flex-start; justify-content:space-between; }
   .rest-title{ color:var(--cloud); font-family:'Fraunces',serif; font-size:22px; font-weight:700; margin:0; }
@@ -149,12 +150,27 @@
   .order-popup-btns .btn-primary{ background:var(--leaf); color:var(--cloud); }
 
   /* Delivery zone map */
-  .zone-map-wrap{ position:relative; margin-top:14px; }
+  .zone-map-wrap{ position:relative; margin-top:10px; }
   .zone-map{ width:100%; height:340px; border-radius:14px; overflow:hidden; background:var(--field-bg); border:1px solid var(--field-border); }
   .zone-map-hint{
     position:absolute; bottom:8px; left:8px; right:8px; text-align:center;
     background:rgba(0,0,0,.6); color:var(--cloud); font-size:11px; padding:6px 8px;
     border-radius:6px; pointer-events:none; font-family:'Inter',sans-serif;
+  }
+  .zone-search-results{
+    max-height:0; overflow:hidden; transition:max-height .15s ease;
+    border-radius:10px; background:var(--field-bg);
+  }
+  .zone-search-results.show{ max-height:220px; overflow-y:auto; border:1px solid var(--field-border); margin-top:6px; }
+  .zone-search-item{
+    padding:11px 14px; border-bottom:1px solid var(--field-border); cursor:pointer;
+    font-size:13px; color:var(--cloud); font-family:'Inter',sans-serif;
+  }
+  .zone-search-item:last-child{ border-bottom:none; }
+  .zone-search-item:active{ background:#2E2B26; }
+  .zone-search-item .zone-search-item-sub{ color:var(--muted-2); font-size:11px; margin-top:2px; }
+  .zone-search-empty, .zone-search-loading{
+    padding:12px 14px; font-size:12px; color:var(--muted-2); font-family:'Inter',sans-serif;
   }
 </style>
 </head>
@@ -329,7 +345,15 @@
       <h1 class="title">Mark your delivery area</h1>
     </div>
     <div class="px">
-      <p class="hint-text">Tap the map to drop corner points around the area you deliver to. Add at least 3 points to form a zone — customers inside it will see your restaurant.</p>
+      <p class="hint-text">Search for an area to jump the map there, then tap to drop corner points around the area you deliver to. Add at least 3 points to form a zone — customers inside it will see your restaurant.</p>
+
+      <p class="loc-field-label" style="margin-top:14px;">Search for an area</p>
+      <div class="field" style="margin-bottom:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="zone-search" type="text" placeholder="Search area, street, landmark…" autocomplete="off" />
+      </div>
+      <div class="zone-search-results" id="zone-search-results"></div>
+
       <div class="zone-map-wrap">
         <div class="zone-map" id="zone-map"></div>
         <p class="zone-map-hint" id="zone-map-hint">Tap the map to add a point</p>
@@ -816,6 +840,8 @@ function redrawZone() {
 
 function openZoneScreen() {
   document.getElementById('zone-error').style.display = "none";
+  document.getElementById('zone-search').value = "";
+  hideZoneSearchResults();
   const saved = state.restaurant?.deliveryZone;
   zonePoints = Array.isArray(saved) ? saved.map(p => ({ lat: p.lat, lng: p.lng })) : [];
 
@@ -836,6 +862,71 @@ function openZoneScreen() {
     redrawZone();
   }, 60);
 }
+
+// ---------- Search-to-jump on the zone map (OpenStreetMap Nominatim geocoding) ----------
+const zoneSearchInput = document.getElementById('zone-search');
+const zoneSearchResultsEl = document.getElementById('zone-search-results');
+
+function hideZoneSearchResults() {
+  zoneSearchResultsEl.classList.remove('show');
+  zoneSearchResultsEl.innerHTML = "";
+}
+
+function jumpZoneMapTo(place) {
+  const lat = parseFloat(place.lat), lng = parseFloat(place.lon);
+  zoneSearchInput.value = place.display_name;
+  hideZoneSearchResults();
+  if (zoneMap) {
+    zoneMap.setView([lat, lng], 16);
+  }
+}
+
+function renderZoneSearchResults(results) {
+  zoneSearchResultsEl.innerHTML = "";
+  if (results.length === 0) {
+    zoneSearchResultsEl.innerHTML = `<p class="zone-search-empty">No matches found — try a different search.</p>`;
+    zoneSearchResultsEl.classList.add('show');
+    return;
+  }
+  results.forEach(place => {
+    const item = document.createElement('div');
+    item.className = "zone-search-item";
+    const main = place.display_name.split(',')[0];
+    const rest = place.display_name.split(',').slice(1).join(',').trim();
+    item.innerHTML = `<div>${main}</div>` + (rest ? `<div class="zone-search-item-sub">${rest}</div>` : '');
+    item.addEventListener('click', () => jumpZoneMapTo(place));
+    zoneSearchResultsEl.appendChild(item);
+  });
+  zoneSearchResultsEl.classList.add('show');
+}
+
+let zoneSearchDebounce = null;
+let zoneSearchAbort = null;
+zoneSearchInput.addEventListener('input', () => {
+  const query = zoneSearchInput.value.trim();
+  clearTimeout(zoneSearchDebounce);
+  if (query.length < 3) {
+    hideZoneSearchResults();
+    return;
+  }
+  zoneSearchResultsEl.innerHTML = `<p class="zone-search-loading">Searching…</p>`;
+  zoneSearchResultsEl.classList.add('show');
+  zoneSearchDebounce = setTimeout(async () => {
+    try {
+      if (zoneSearchAbort) zoneSearchAbort.abort();
+      zoneSearchAbort = new AbortController();
+      const url = "https://nominatim.openstreetmap.org/search?format=json&addressdetails=0&limit=6&countrycodes=in&q=" + encodeURIComponent(query);
+      const res = await fetch(url, { signal: zoneSearchAbort.signal, headers: { 'Accept-Language': 'en' } });
+      const data = await res.json();
+      renderZoneSearchResults(Array.isArray(data) ? data : []);
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        zoneSearchResultsEl.innerHTML = `<p class="zone-search-empty">Search failed — check your connection.</p>`;
+        zoneSearchResultsEl.classList.add('show');
+      }
+    }
+  }, 450);
+});
 
 document.getElementById('zone-undo-btn').addEventListener('click', () => {
   zonePoints.pop();
