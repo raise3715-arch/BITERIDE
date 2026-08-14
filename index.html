@@ -114,6 +114,18 @@
   }
   .photo-upload img{ width:100%; height:100%; object-fit:cover; }
 
+  .rest-photo-upload{
+    position:relative; display:block; margin:16px 24px 0; height:140px; border-radius:14px;
+    border:1.5px dashed var(--field-border); background:var(--field-bg); overflow:hidden;
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+  }
+  .rest-photo-upload img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .rest-photo-placeholder{ display:flex; flex-direction:column; align-items:center; gap:6px; color:var(--muted-2); font-size:13px; }
+  .rest-photo-edit-badge{
+    position:absolute; right:10px; bottom:10px; background:rgba(28,27,25,.75); color:var(--cloud);
+    font-size:11px; font-weight:600; padding:6px 10px; border-radius:20px; display:flex; align-items:center; gap:5px;
+  }
+
   .logout-row{ padding:24px 24px 0; }
 
   .toast{
@@ -274,6 +286,16 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
       </button>
     </div>
+
+    <label class="rest-photo-upload" id="rest-photo-upload-wrap">
+      <span class="rest-photo-placeholder" id="rest-photo-placeholder">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#B8B0A2" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Tap to add a restaurant photo
+      </span>
+      <img id="rest-photo-preview" style="display:none;" />
+      <span class="rest-photo-edit-badge" id="rest-photo-edit-badge" style="display:none;">📷 Change photo</span>
+      <input type="file" accept="image/*" id="rest-photo-input" style="display:none;" />
+    </label>
 
     <a class="nav-card" id="orders-nav-card" href="restaurant-orders.html">
       <span class="nav-card-left">
@@ -504,6 +526,10 @@ function init() {
   document.getElementById('item-photo-input').addEventListener('change', handlePhotoSelect);
   document.getElementById('item-save-btn').addEventListener('click', saveItem);
   document.getElementById('item-delete-btn').addEventListener('click', deleteItem);
+
+  // Restaurant photo
+  document.getElementById('rest-photo-upload-wrap').addEventListener('click', () => document.getElementById('rest-photo-input').click());
+  document.getElementById('rest-photo-input').addEventListener('change', handleRestPhotoSelect);
 }
 
 function useGps() {
@@ -569,10 +595,59 @@ function logInRestaurant(id, data) {
   localStorage.setItem('asfood_partner_id', id);
   document.getElementById('home-rest-name').textContent = data.restaurantName || id;
   document.getElementById('home-rest-address').textContent = data.address || "";
+  renderRestPhoto(data.photo || "");
   showScreen('home');
   listenMenu();
   listenOrdersBadge();
   updateZoneBadge();
+}
+
+// ---------- RESTAURANT PHOTO ----------
+function renderRestPhoto(photoUrl) {
+  const preview = document.getElementById('rest-photo-preview');
+  const placeholder = document.getElementById('rest-photo-placeholder');
+  const editBadge = document.getElementById('rest-photo-edit-badge');
+  if (photoUrl) {
+    preview.src = photoUrl; preview.style.display = "block";
+    placeholder.style.display = "none";
+    editBadge.style.display = "flex";
+  } else {
+    preview.style.display = "none";
+    placeholder.style.display = "flex";
+    editBadge.style.display = "none";
+  }
+}
+
+function handleRestPhotoSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    const img = new Image();
+    img.onload = async () => {
+      // Resize down to keep the Firebase record small
+      const maxDim = 800;
+      let w = img.width, h = img.height;
+      if (w > h && w > maxDim) { h = h * (maxDim / w); w = maxDim; }
+      else if (h > maxDim) { w = w * (maxDim / h); h = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      renderRestPhoto(dataUrl);
+      try {
+        const { db, ref, update } = window.fb;
+        await update(ref(db, 'restaurants/' + state.restId), { photo: dataUrl });
+        state.restaurant.photo = dataUrl;
+        showToast("Restaurant photo updated");
+      } catch (err) {
+        showToast("Couldn't save photo — check your connection and try again.");
+        renderRestPhoto(state.restaurant.photo || "");
+      }
+    };
+    img.src = ev.target.result;
+  };
+  reader.readAsDataURL(file);
 }
 
 // ---------- REGISTER ----------
