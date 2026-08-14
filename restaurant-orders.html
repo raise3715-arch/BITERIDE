@@ -343,7 +343,15 @@ window.addEventListener('fb-ready', () => {
     orders = list;
     renderList();
 
-    if (knownOrderIds !== null) {
+    if (knownOrderIds === null) {
+      // App was (re)opened — if there's already a pending order waiting,
+      // surface the accept popup for the oldest one right away.
+      const pendingOrders = list.filter(o => (o.status || 'pending') === 'pending');
+      if (pendingOrders.length) {
+        const oldestPending = pendingOrders.reduce((a, b) => (a.createdAt || 0) <= (b.createdAt || 0) ? a : b);
+        showNewOrderPopup(oldestPending);
+      }
+    } else {
       let newOrder = null;
       currentIds.forEach(id => {
         if (!knownOrderIds.has(id)) newOrder = list.find(o => o.id === id);

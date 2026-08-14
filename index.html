@@ -844,6 +844,16 @@ function listenOrdersBadge() {
 
     if (knownOrderIds === null) {
       knownOrderIds = currentIds;
+      // App was (re)opened — if there's already a pending order waiting,
+      // surface the accept popup for the oldest one right away.
+      let oldestPending = null;
+      currentIds.forEach(id => {
+        const o = allOrders[id];
+        if ((o.status || 'pending') === 'pending') {
+          if (!oldestPending || (o.createdAt || 0) < (allOrders[oldestPending].createdAt || 0)) oldestPending = id;
+        }
+      });
+      if (oldestPending) showNewOrderPopup({ _id: oldestPending, ...allOrders[oldestPending] });
       return;
     }
     let newOrder = null;
