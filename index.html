@@ -63,6 +63,28 @@
     width:100%; text-align:center; padding:8px; background:none; border:none;
     color:var(--marigold); font-size:14px; cursor:pointer; font-family:'Inter',sans-serif;
   }
+
+  .pay-pending-card{
+    background:var(--field-bg); border:1.5px solid var(--chili); border-radius:14px; padding:14px 16px;
+  }
+  .pay-pending-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--cloud); padding:2px 0; }
+  .pay-pending-row-total{ font-weight:700; border-top:1px dashed #4A453C; margin-top:6px; padding-top:6px; }
+  .pay-pending-cust{ color:#B8B0A2; font-size:12px; margin:6px 0 12px; }
+  .pay-pending-btns{ display:flex; gap:10px; }
+  .pay-pending-btns .btn-primary{ background:var(--leaf); color:#fff; flex:1; padding:10px; font-size:13px; }
+  .pay-pending-btns .btn-danger{ flex:1; padding:10px; font-size:13px; }
+
+  .rest-id-box{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:var(--field-bg); border:1px solid var(--field-border); border-radius:12px;
+    padding:12px 14px; margin-bottom:18px;
+  }
+  .rest-id-label{ color:#8A8474; font-size:10px; letter-spacing:.5px; text-transform:uppercase; margin:0 0 4px; font-family:'Inter',sans-serif; }
+  .rest-id-value{ color:var(--cloud); font-size:14px; font-weight:700; margin:0; font-family:'IBM Plex Mono',monospace; word-break:break-all; }
+  .rest-id-copy-btn{
+    flex-shrink:0; padding:8px 14px; border-radius:8px; border:1.5px solid var(--marigold);
+    background:none; color:var(--marigold); font-weight:700; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
   .btn-back{ background:none; border:none; color:var(--marigold); cursor:pointer; padding:0; display:flex; }
   .gps-btn{
     padding:12px 14px; border:none; border-radius:10px; background:var(--leaf);
@@ -311,6 +333,12 @@
       <span class="nav-badge" id="zone-status-badge" style="background:#1C1B19;">Not set</span>
     </a>
 
+    <div class="section-row" id="payment-pending-row" style="display:none;">
+      <h2 class="section-title">Payment pending confirmation</h2>
+      <span class="nav-badge" id="payment-pending-badge" style="background:var(--chili);">0</span>
+    </div>
+    <div class="menu-list" id="payment-pending-list"></div>
+
     <div class="section-row">
       <h2 class="section-title">Payment (GPay)</h2>
       <span class="nav-badge" id="gpay-status-badge" style="background:#8A8474;">Not set</span>
@@ -322,7 +350,15 @@
     <p style="color:#8A8474; font-size:11px; margin:0 0 12px; font-family:'Inter',sans-serif; line-height:1.5;">
       Open GPay → tap your photo (top-right) → Bank account → your UPI ID will be shown there (something like <b>yourname@okaxis</b> or <b>9656504107@okhdfcbank</b>). Just a mobile number won't work as a payment QR — enter the full UPI ID.
     </p>
-    <button class="btn-primary" id="gpay-save-btn" style="margin-bottom:18px;">Save UPI ID</button>
+    <button class="btn-primary" id="gpay-save-btn" style="margin-bottom:12px;">Save UPI ID</button>
+
+    <div class="rest-id-box" id="rest-id-box">
+      <div>
+        <p class="rest-id-label">Restaurant ID (for auto-payment setup)</p>
+        <p class="rest-id-value" id="rest-id-value">—</p>
+      </div>
+      <button class="rest-id-copy-btn" id="rest-id-copy-btn" type="button">Copy</button>
+    </div>
 
     <div class="section-row">
       <h2 class="section-title">Menu items</h2>
@@ -639,9 +675,11 @@ function logInRestaurant(id, data) {
   renderRestPhoto(data.photo || "");
   document.getElementById('gpay-number').value = data.gpayNumber || "";
   updateGpayBadge(data.gpayNumber || "");
+  document.getElementById('rest-id-value').textContent = id;
   showScreen('home');
   listenMenu();
   listenOrdersBadge();
+  listenPaymentPending();
   updateZoneBadge();
 }
 
@@ -680,6 +718,17 @@ async function saveGpayNumber() {
   }
 }
 document.getElementById('gpay-save-btn').addEventListener('click', saveGpayNumber);
+document.getElementById('rest-id-copy-btn').addEventListener('click', () => {
+  const id = state.restId || "";
+  if (!id) return;
+  const btn = document.getElementById('rest-id-copy-btn');
+  navigator.clipboard.writeText(id).then(() => {
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+  }).catch(() => {
+    alert("Restaurant ID: " + id);
+  });
+});
 
 // ---------- RESTAURANT PHOTO ----------
 function renderRestPhoto(photoUrl) {
@@ -923,6 +972,67 @@ function listenOrdersBadge() {
     // them show together in one popup instead of queuing one after another.
     renderOrderPopup(pendingList);
   });
+}
+
+// ---------- PAYMENT PENDING (GPay orders awaiting restaurant's confirmation) ----------
+// GPay orders land here first (status: 'awaiting_payment') instead of the
+// normal accept/reject popup, so nothing gets cooked before the restaurant
+// has actually checked their own GPay/bank app and seen the credit land.
+function listenPaymentPending() {
+  const { db, ref, onValue } = window.fb;
+  onValue(ref(db, 'restaurants/' + state.restId + '/orders'), snap => {
+    const list = [];
+    snap.forEach(child => {
+      const o = child.val();
+      if (o.status === 'awaiting_payment') list.push({ _id: child.key, ...o });
+    });
+    list.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+
+    const row = document.getElementById('payment-pending-row');
+    const badge = document.getElementById('payment-pending-badge');
+    const listEl = document.getElementById('payment-pending-list');
+
+    if (!list.length) {
+      row.style.display = "none";
+      listEl.innerHTML = "";
+      return;
+    }
+    row.style.display = "flex";
+    badge.textContent = String(list.length);
+
+    listEl.innerHTML = "";
+    list.forEach(order => {
+      const itemsHtml = (order.items || []).map(it =>
+        `<div class="pay-pending-row"><span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span></div>`
+      ).join('');
+      const card = document.createElement('div');
+      card.className = "pay-pending-card";
+      card.innerHTML = `
+        <div class="pay-pending-row" style="font-weight:700; margin-bottom:6px;"><span>${order.orderNumber || 'Order'}</span><span>Check your GPay for ₹${order.total || 0}</span></div>
+        ${itemsHtml}
+        <div class="pay-pending-row pay-pending-row-total"><span>Total</span><span>₹${order.total || 0}</span></div>
+        <p class="pay-pending-cust">${(order.customerName || 'Guest')} · ${(order.customerPhone || '')}</p>
+        <div class="pay-pending-btns">
+          <button class="btn-danger" data-action="reject-pay" data-id="${order._id}">Not received</button>
+          <button class="btn-primary" data-action="confirm-pay" data-id="${order._id}">✅ Payment received</button>
+        </div>
+      `;
+      listEl.appendChild(card);
+    });
+
+    listEl.querySelectorAll('[data-action]').forEach(btn => {
+      btn.onclick = () => handlePaymentPendingAction(btn.dataset.id, btn.dataset.action);
+    });
+  });
+}
+
+async function handlePaymentPendingAction(orderId, action) {
+  const { db, ref, update } = window.fb;
+  const newStatus = action === 'confirm-pay' ? 'pending' : 'cancelled';
+  await update(ref(db, 'restaurants/' + state.restId + '/orders/' + orderId), { status: newStatus });
+  // When confirmed, this flips the order to 'pending' — the existing
+  // listenOrdersBadge listener picks that up on its own and pops the
+  // normal new-order alert with sound, same as a cash order would.
 }
 
 // ---------- DELIVERY ZONE ----------
