@@ -317,9 +317,12 @@
     </div>
     <div class="field">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#8A8474" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-      <input id="gpay-number" type="tel" inputmode="numeric" maxlength="10" placeholder="GPay number (10-digit mobile)" />
+      <input id="gpay-number" type="text" placeholder="UPI ID e.g. 9656504107@okaxis" />
     </div>
-    <button class="btn-primary" id="gpay-save-btn" style="margin-bottom:18px;">Save GPay number</button>
+    <p style="color:#8A8474; font-size:11px; margin:0 0 12px; font-family:'Inter',sans-serif; line-height:1.5;">
+      Open GPay → tap your photo (top-right) → Bank account → your UPI ID will be shown there (something like <b>yourname@okaxis</b> or <b>9656504107@okhdfcbank</b>). Just a mobile number won't work as a payment QR — enter the full UPI ID.
+    </p>
+    <button class="btn-primary" id="gpay-save-btn" style="margin-bottom:18px;">Save UPI ID</button>
 
     <div class="section-row">
       <h2 class="section-title">Menu items</h2>
@@ -656,8 +659,8 @@ function updateGpayBadge(number) {
 async function saveGpayNumber() {
   const input = document.getElementById('gpay-number');
   const number = input.value.trim();
-  if (number && !/^[0-9]{10}$/.test(number)) {
-    alert("Please enter a valid 10-digit GPay number.");
+  if (number && !/^[\w.\-]{2,256}@[a-zA-Z]{2,64}$/.test(number)) {
+    alert("Please enter a valid UPI ID (e.g. 9656504107@okaxis) — a plain mobile number won't work as a payment QR. Check GPay → your photo → Bank account.");
     return;
   }
   const btn = document.getElementById('gpay-save-btn');
