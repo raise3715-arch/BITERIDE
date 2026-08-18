@@ -229,29 +229,24 @@ function showToast(msg) {
   window._toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-function beep() {
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.connect(g); g.connect(ctx.destination);
-    o.type = 'sine'; o.frequency.value = 880;
-    g.gain.setValueAtTime(0.2, ctx.currentTime);
-    o.start();
-    o.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
-    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    o.stop(ctx.currentTime + 0.4);
-  } catch (e) {}
-}
+const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
+alarmAudio.loop = true;
 
-let ringInterval = null;
+let vibrateInterval = null;
 function startRinging() {
   stopRinging();
-  beep();
-  ringInterval = setInterval(beep, 1200);
+  alarmAudio.currentTime = 0;
+  alarmAudio.play().catch(() => {});
+  if (navigator.vibrate) {
+    navigator.vibrate([500, 300, 500, 300, 500]);
+    vibrateInterval = setInterval(() => navigator.vibrate([500, 300, 500, 300, 500]), 2000);
+  }
 }
 function stopRinging() {
-  if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
+  alarmAudio.pause();
+  alarmAudio.currentTime = 0;
+  if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
+  if (navigator.vibrate) navigator.vibrate(0);
 }
 
 // Renders every currently-pending order together in one popup, each with
