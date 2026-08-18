@@ -233,6 +233,21 @@ function showToast(msg) {
 const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
 alarmAudio.loop = true;
 
+// ---------- Audio unlock ----------
+// Same audio-unlock trick as index.html — primes playback on the first tap
+// on this page so a later, tap-less startRinging() call (from the Firebase
+// listener) is allowed to actually produce sound.
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  alarmAudio.play().then(() => { alarmAudio.pause(); alarmAudio.currentTime = 0; }).catch(() => {
+    audioUnlocked = false;
+  });
+}
+document.addEventListener('click', unlockAudio, { capture: true });
+document.addEventListener('touchstart', unlockAudio, { capture: true });
+
 let vibrateInterval = null;
 function startRinging() {
   stopRinging();

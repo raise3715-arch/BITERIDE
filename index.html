@@ -656,6 +656,24 @@ function showToast(msg) {
 const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
 alarmAudio.loop = true;
 
+// ---------- Audio unlock ----------
+// Mobile browsers block audio.play() unless it happens right after a user
+// tap. If the app is freshly opened and a new order lands before the
+// person has tapped anything on THIS screen, the ring can silently fail.
+// We "prime" the audio element on the very first tap anywhere in the app
+// (any screen) so every later startRinging() call — triggered by Firebase,
+// not by a tap — is allowed to play with sound.
+let audioUnlocked = false;
+function unlockAudio() {
+  if (audioUnlocked) return;
+  audioUnlocked = true;
+  alarmAudio.play().then(() => { alarmAudio.pause(); alarmAudio.currentTime = 0; }).catch(() => {
+    audioUnlocked = false; // retry on the next tap if it didn't actually unlock
+  });
+}
+document.addEventListener('click', unlockAudio, { capture: true });
+document.addEventListener('touchstart', unlockAudio, { capture: true });
+
 let vibrateInterval = null;
 function startRinging() {
   stopRinging();
