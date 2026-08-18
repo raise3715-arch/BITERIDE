@@ -32,6 +32,7 @@
   #app{ width:100%; max-width:420px; min-height:100vh; background:var(--ink); position:relative; }
   .screen{ display:none; padding-bottom:24px; }
   .screen.active{ display:block; }
+  #screen-loading.active{ display:flex; align-items:center; justify-content:center; min-height:100vh; padding-bottom:0; }
 
   .header{ padding:40px 24px 24px; }
   .eyebrow{ color:var(--marigold); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; margin:0; }
@@ -113,6 +114,27 @@
   .loc-field-label{ color:var(--muted-2); font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; margin:0 0 6px; text-transform:uppercase; }
 
   .top-row{ padding:32px 24px 8px; display:flex; align-items:flex-start; justify-content:space-between; }
+
+  .install-banner{
+    margin:16px 24px 0; padding:14px; border-radius:16px;
+    background:linear-gradient(135deg,#2A2823,var(--field-bg));
+    border:1px solid var(--field-border);
+    display:flex; align-items:center; gap:12px; position:relative;
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+  }
+  .install-banner img{ width:48px; height:48px; border-radius:12px; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.3); }
+  .install-banner-text{ flex:1; min-width:0; }
+  .install-banner-text .t{ color:var(--cloud); font-weight:700; font-size:14px; margin:0; }
+  .install-banner-text .s{ color:var(--muted); font-size:12px; margin:2px 0 0; display:flex; align-items:center; gap:4px; }
+  .install-banner-text .s .star{ color:var(--marigold); }
+  .install-banner-btn{
+    background:var(--marigold); color:var(--ink); border:none; font-weight:700; font-size:13px;
+    padding:8px 16px; border-radius:999px; font-family:'Inter',sans-serif; flex-shrink:0;
+  }
+  .install-banner-close{
+    position:absolute; top:6px; right:8px; background:none; border:none; color:var(--muted);
+    font-size:16px; line-height:1; padding:4px; cursor:pointer;
+  }
   .rest-title{ color:var(--cloud); font-family:'Fraunces',serif; font-size:22px; font-weight:700; margin:0; }
   .rest-sub{ color:var(--muted-2); font-size:12px; margin:4px 0 0; }
   .icon-btn{ background:var(--field-bg); border:1px solid var(--field-border); border-radius:10px; padding:8px; cursor:pointer; display:flex; }
@@ -265,7 +287,7 @@
   </div>
 
   <!-- LOADING (shown while we check for a saved session) -->
-  <section class="screen active" id="screen-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+  <section class="screen active" id="screen-loading">
     <div style="text-align:center;">
       <div style="width:38px;height:38px;border-radius:50%;border:3px solid #3A3733;border-top-color:#E8A33D;margin:0 auto 14px;animation:spin 0.8s linear infinite;"></div>
       <p style="color:#B8B0A2;font-family:'Inter',sans-serif;font-size:13px;">Loading…</p>
@@ -362,6 +384,17 @@
         <span class="type-badge" id="home-type-badge">Hotel</span>
       </div>
     </div>
+
+    <div class="install-banner" id="pwaInstallBanner" style="display:none;">
+      <button class="install-banner-close" id="pwaInstallClose" aria-label="Dismiss">✕</button>
+      <img src="./icon-192.png" alt="App icon">
+      <div class="install-banner-text">
+        <p class="t">Restaurant Partner</p>
+        <p class="s"><span class="star">★★★★★</span> Install for faster order alerts</p>
+      </div>
+      <button class="install-banner-btn" id="pwaInstallBtn">Install</button>
+    </div>
+
     <p class="empty-text" style="padding:32px 24px 0;">Use the tabs below to manage orders, stock, and your account.</p>
   </section>
 
@@ -694,28 +727,37 @@ function init() {
   const savedId = localStorage.getItem('asfood_partner_id');
   if (savedId) {
     const { db, ref, get } = window.fb;
-    let settled = false;
-    const finish = (fn) => { if (settled) return; settled = true; fn(); };
-    // Safety timeout: if Firebase hasn't responded in 7s (slow/no connection),
-    // don't leave the user stuck on the loading screen — fall back to login.
+
+    // If we have a cached copy of this restaurant's data, log the user in
+    // immediately — this stops the login-screen flash on refresh / slow
+    // network. We then quietly refresh from Firebase in the background.
+    let cached = null;
+    try { cached = JSON.parse(localStorage.getItem('asfood_partner_data') || 'null'); } catch (e) {}
+    if (cached) logInRestaurant(savedId, cached);
+
+    let timedOutOrErrored = false;
     const timeoutId = setTimeout(() => {
-      finish(() => showScreen('login'));
+      timedOutOrErrored = true;
+      // Only fall back to login if we had nothing cached to show already.
+      if (!cached) showScreen('login');
     }, 7000);
+
     get(ref(db, 'restaurants/' + savedId)).then(snap => {
       clearTimeout(timeoutId);
-      finish(() => {
-        if (snap.exists()) {
-          logInRestaurant(savedId, snap.val());
-        } else {
-          localStorage.removeItem('asfood_partner_id');
-          showScreen('login');
-        }
-      });
+      if (snap.exists()) {
+        logInRestaurant(savedId, snap.val()); // fresh data (updates cache too)
+      } else if (!timedOutOrErrored || cached) {
+        // Account genuinely no longer exists — the only case where we
+        // clear the session and force login.
+        localStorage.removeItem('asfood_partner_id');
+        localStorage.removeItem('asfood_partner_data');
+        showScreen('login');
+      }
     }).catch(() => {
       clearTimeout(timeoutId);
-      // Network error — keep the saved session and just show login;
-      // user can retry once connection is back.
-      finish(() => showScreen('login'));
+      // Network error — keep whatever session is already on screen; only
+      // show login if there was nothing cached to fall back on.
+      if (!cached) showScreen('login');
     });
   } else {
     showScreen('login');
@@ -733,6 +775,7 @@ function init() {
   // Logout
   document.getElementById('logout-btn').addEventListener('click', () => {
     localStorage.removeItem('asfood_partner_id');
+    localStorage.removeItem('asfood_partner_data');
     state = { restId: null, restaurant: null, editingItemId: null, photoDataUrl: "" };
     showScreen('login');
   });
@@ -809,6 +852,7 @@ function logInRestaurant(id, data) {
   state.restId = id;
   state.restaurant = data;
   localStorage.setItem('asfood_partner_id', id);
+  try { localStorage.setItem('asfood_partner_data', JSON.stringify(data)); } catch (e) {}
   document.getElementById('home-rest-name').textContent = data.restaurantName || id;
   document.getElementById('home-rest-address').textContent = data.address || "";
   document.getElementById('home-type-badge').textContent = data.businessType === 'groceries' ? 'Groceries' : 'Hotel';
@@ -1385,28 +1429,37 @@ document.getElementById('zone-save-btn').addEventListener('click', async () => {
   }
 });
 </script>
-<button id="pwaInstallBtn" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;background:var(--marigold);color:var(--ink);border:none;padding:12px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.35);">⬇ App Install cheyyu</button>
 <script>
 (function(){
   var deferredPrompt = null;
+  var banner = document.getElementById('pwaInstallBanner');
   var btn = document.getElementById('pwaInstallBtn');
+  var closeBtn = document.getElementById('pwaInstallClose');
+  var DISMISS_KEY = 'asfood_install_dismissed';
 
   window.addEventListener('beforeinstallprompt', function(e){
     e.preventDefault();
     deferredPrompt = e;
-    btn.style.display = 'block';
+    if (!localStorage.getItem(DISMISS_KEY)) {
+      banner.style.display = 'flex';
+    }
   });
 
   btn.addEventListener('click', async function(){
     if(!deferredPrompt) return;
-    btn.style.display = 'none';
+    banner.style.display = 'none';
     deferredPrompt.prompt();
     var choice = await deferredPrompt.userChoice;
     deferredPrompt = null;
   });
 
+  closeBtn.addEventListener('click', function(){
+    banner.style.display = 'none';
+    try { localStorage.setItem(DISMISS_KEY, '1'); } catch(e) {}
+  });
+
   window.addEventListener('appinstalled', function(){
-    btn.style.display = 'none';
+    banner.style.display = 'none';
     deferredPrompt = null;
   });
 
