@@ -4,6 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Restaurant Partner</title>
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#3F6B4F">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="icon" href="./icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -1348,6 +1352,40 @@ document.getElementById('zone-save-btn').addEventListener('click', async () => {
     btn.textContent = "Save delivery zone";
   }
 });
+</script>
+<button id="pwaInstallBtn" style="display:none;position:fixed;left:50%;transform:translateX(-50%);bottom:18px;z-index:9999;background:var(--marigold);color:var(--ink);border:none;padding:12px 20px;border-radius:999px;font-family:'Inter',sans-serif;font-weight:700;font-size:14px;box-shadow:0 6px 18px rgba(0,0,0,.35);">⬇ App Install cheyyu</button>
+<script>
+(function(){
+  var deferredPrompt = null;
+  var btn = document.getElementById('pwaInstallBtn');
+
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    deferredPrompt = e;
+    btn.style.display = 'block';
+  });
+
+  btn.addEventListener('click', async function(){
+    if(!deferredPrompt) return;
+    btn.style.display = 'none';
+    deferredPrompt.prompt();
+    var choice = await deferredPrompt.userChoice;
+    deferredPrompt = null;
+  });
+
+  window.addEventListener('appinstalled', function(){
+    btn.style.display = 'none';
+    deferredPrompt = null;
+  });
+
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('./sw.js').catch(function(err){
+        console.warn('SW register failed', err);
+      });
+    });
+  }
+})();
 </script>
 </body>
 </html>
