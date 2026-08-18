@@ -264,8 +264,17 @@
     </div>
   </div>
 
+  <!-- LOADING (shown while we check for a saved session) -->
+  <section class="screen active" id="screen-loading" style="display:flex;align-items:center;justify-content:center;min-height:100vh;">
+    <div style="text-align:center;">
+      <div style="width:38px;height:38px;border-radius:50%;border:3px solid #3A3733;border-top-color:#E8A33D;margin:0 auto 14px;animation:spin 0.8s linear infinite;"></div>
+      <p style="color:#B8B0A2;font-family:'Inter',sans-serif;font-size:13px;">Loading…</p>
+    </div>
+  </section>
+  <style>@keyframes spin{to{transform:rotate(360deg);}}</style>
+
   <!-- LOGIN -->
-  <section class="screen active" id="screen-login">
+  <section class="screen" id="screen-login">
     <div class="header">
       <p class="eyebrow">RESTAURANT PARTNER</p>
       <h1 class="title">Welcome back</h1>
@@ -675,18 +684,41 @@ async function handlePopupOrderAction(orderId, action) {
 }
 
 window.addEventListener('fb-ready', init);
+// If Firebase itself never loads (CDN blocked / no connection at all),
+// don't leave the user staring at the loading spinner forever.
+setTimeout(() => {
+  if (!window.fb) showScreen('login');
+}, 9000);
 
 function init() {
   const savedId = localStorage.getItem('asfood_partner_id');
   if (savedId) {
     const { db, ref, get } = window.fb;
+    let settled = false;
+    const finish = (fn) => { if (settled) return; settled = true; fn(); };
+    // Safety timeout: if Firebase hasn't responded in 7s (slow/no connection),
+    // don't leave the user stuck on the loading screen — fall back to login.
+    const timeoutId = setTimeout(() => {
+      finish(() => showScreen('login'));
+    }, 7000);
     get(ref(db, 'restaurants/' + savedId)).then(snap => {
-      if (snap.exists()) {
-        logInRestaurant(savedId, snap.val());
-      } else {
-        localStorage.removeItem('asfood_partner_id');
-      }
-    }).catch(() => {});
+      clearTimeout(timeoutId);
+      finish(() => {
+        if (snap.exists()) {
+          logInRestaurant(savedId, snap.val());
+        } else {
+          localStorage.removeItem('asfood_partner_id');
+          showScreen('login');
+        }
+      });
+    }).catch(() => {
+      clearTimeout(timeoutId);
+      // Network error — keep the saved session and just show login;
+      // user can retry once connection is back.
+      finish(() => showScreen('login'));
+    });
+  } else {
+    showScreen('login');
   }
 
   // Login
