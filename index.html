@@ -156,7 +156,24 @@
   }
 
   .menu-list{ padding:16px 24px 100px; display:flex; flex-direction:column; gap:12px; }
+  .home-orders-list{ padding:16px 24px 4px; display:flex; flex-direction:column; gap:12px; }
+  .order-chit{ background:var(--cloud); border-radius:10px; padding:14px; cursor:pointer; border:none; width:100%; text-align:left; font-family:'Inter',sans-serif; display:block; }
   .chit{ background:var(--cloud); border-radius:10px; padding:14px; }
+  .order-top{ display:flex; align-items:center; justify-content:space-between; }
+  .order-num{ color:var(--ink); font-weight:700; font-family:'IBM Plex Mono',monospace; font-size:14px; margin:0; }
+  .order-time{ color:#5C574C; font-size:11px; margin:2px 0 0; }
+  .order-mid{ display:flex; align-items:center; justify-content:space-between; margin-top:8px; }
+  .order-cust{ color:#3a3733; font-size:13px; margin:0; }
+  .order-total{ color:var(--ink); font-family:'IBM Plex Mono',monospace; font-weight:700; font-size:14px; margin:0; }
+  .pill{
+    display:inline-block; padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+    font-family:'IBM Plex Mono',monospace; letter-spacing:0.5px; text-transform:uppercase;
+  }
+  .pill-pending{ background:#F3D9AE; color:#8A5A0F; }
+  .pill-preparing{ background:#CFE0D6; color:#2C4A37; }
+  .pill-ready{ background:#BFE3F0; color:#1C5A70; }
+  .pill-delivered{ background:#D6D0C4; color:#4A463D; }
+  .pill-cancelled{ background:#EFC3BA; color:#7A2A1D; }
   .menu-row{ display:flex; align-items:center; gap:12px; }
   .menu-photo{ width:56px; height:56px; border-radius:10px; object-fit:cover; background:#e7e0d2; flex-shrink:0; }
   .menu-info{ flex:1; min-width:0; }
@@ -385,7 +402,13 @@
       <button class="install-banner-btn" id="pwaInstallBtn">Install</button>
     </div>
 
-    <p class="empty-text" style="padding:32px 24px 0;">Use the tabs below to manage orders, stock, and your account.</p>
+    <div class="section-row" id="home-orders-row" style="display:none;">
+      <h2 class="section-title">Orders in progress</h2>
+      <span class="nav-badge" id="home-orders-badge" style="background:var(--chili);">0</span>
+    </div>
+    <div class="home-orders-list" id="home-orders-list"></div>
+
+    <p class="empty-text" id="home-empty-text" style="padding:32px 24px 0;">Use the tabs below to manage orders, stock, and your account.</p>
   </section>
 
   <!-- STOCK ITEM -->
@@ -486,12 +509,7 @@
   <!-- ITEM FORM -->
   <section class="screen screen-with-tabs" id="screen-item-form">
     <div class="px" style="padding-top:32px;">
-      <button class="btn-back" onclick="showScreen('home')">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-      </button>
-    </div>
-    <div class="header">
-      <p class="eyebrow" id="item-form-eyebrow">NEW ITEM</p>
+      <button class="btn-back" onclick="showScreen('stock')">
       <h1 class="title" id="item-form-title">Add menu item</h1>
     </div>
     <div class="px stack">
@@ -1149,19 +1167,77 @@ async function deleteItem() {
 }
 
 // ---------- ORDERS: badge + new-order alert ----------
+function timeAgo(ts) {
+  const diff = Math.floor((Date.now() - ts) / 1000);
+  if (diff < 60) return "just now";
+  if (diff < 3600) return Math.floor(diff / 60) + " min ago";
+  if (diff < 86400) return Math.floor(diff / 3600) + " hr ago";
+  return new Date(ts).toLocaleDateString();
+}
+
+function pillClass(status) {
+  return "pill pill-" + (status || "pending");
+}
+
+// Orders that have been accepted (preparing/ready) but not yet delivered —
+// shown on the home dashboard, newest first, as a quick at-a-glance list.
+function renderHomeOrdersInProgress(list) {
+  const row = document.getElementById('home-orders-row');
+  const badge = document.getElementById('home-orders-badge');
+  const listEl = document.getElementById('home-orders-list');
+  const emptyText = document.getElementById('home-empty-text');
+
+  if (!list.length) {
+    row.style.display = "none";
+    listEl.innerHTML = "";
+    emptyText.style.display = "block";
+    return;
+  }
+
+  row.style.display = "flex";
+  badge.textContent = String(list.length);
+  emptyText.style.display = "none";
+
+  listEl.innerHTML = "";
+  list.forEach(o => {
+    const itemCount = (o.items || []).reduce((s, it) => s + (it.qty || 0), 0);
+    const btn = document.createElement('button');
+    btn.className = "order-chit";
+    btn.innerHTML = `
+      <div class="order-top">
+        <p class="order-num">${o.orderNumber || o._id}</p>
+        <span class="${pillClass(o.status)}">${o.status || 'pending'}</span>
+      </div>
+      <p class="order-time">${timeAgo(o.createdAt || Date.now())} · ${itemCount} item${itemCount === 1 ? '' : 's'}</p>
+      <div class="order-mid">
+        <p class="order-cust">${o.customerName || 'Guest'}</p>
+        <p class="order-total">₹${o.total || 0}</p>
+      </div>
+    `;
+    btn.addEventListener('click', () => { window.location.href = 'restaurant-orders.html?order=' + encodeURIComponent(o._id); });
+    listEl.appendChild(btn);
+  });
+}
+
 function listenOrdersBadge() {
   const { db, ref, onValue } = window.fb;
   onValue(ref(db, 'restaurants/' + state.restId + '/orders'), snap => {
     const pendingList = [];
+    const inProgressList = [];
     snap.forEach(child => {
       const o = child.val();
-      if ((o.status || 'pending') === 'pending') pendingList.push({ _id: child.key, ...o });
+      const status = o.status || 'pending';
+      if (status === 'pending') pendingList.push({ _id: child.key, ...o });
+      if (status === 'preparing' || status === 'ready') inProgressList.push({ _id: child.key, ...o });
     });
     pendingList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    inProgressList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // latest first
 
     const badge = document.getElementById('pending-badge');
     if (pendingList.length > 0) { badge.style.display = "inline-block"; badge.textContent = pendingList.length + " new"; }
     else { badge.style.display = "none"; }
+
+    renderHomeOrdersInProgress(inProgressList);
 
     // Always reflects the full set of currently-pending orders, so all of
     // them show together in one popup instead of queuing one after another.

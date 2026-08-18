@@ -210,6 +210,7 @@
 let restId = localStorage.getItem('asfood_partner_id');
 let orders = [];
 let selectedOrderId = null;
+let pendingOpenId = new URLSearchParams(window.location.search).get('order');
 
 if (!restId) {
   window.location.href = 'index.html';
@@ -364,6 +365,12 @@ window.addEventListener('fb-ready', () => {
     list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     orders = list;
     renderList();
+
+    if (pendingOpenId) {
+      const target = pendingOpenId;
+      pendingOpenId = null;
+      if (list.some(o => o.id === target)) openDetail(target);
+    }
 
     // Always reflects the full set of currently-pending orders, so all of
     // them show together in one popup instead of queuing one after another.
