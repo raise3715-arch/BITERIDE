@@ -162,6 +162,28 @@
 
   .logout-row{ padding:24px 24px 0; }
 
+  .bottom-tab-bar{
+    display:none; position:fixed; left:50%; transform:translateX(-50%);
+    bottom:0; width:100%; max-width:420px; background:var(--field-bg);
+    border-top:1px solid var(--field-border); z-index:500;
+    justify-content:space-around; align-items:center; padding:8px 0 max(8px, env(safe-area-inset-bottom));
+  }
+  .bottom-tab-bar.show{ display:flex; }
+  .tab-item{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:4px;
+    background:none; border:none; color:var(--muted); font-size:11px; font-weight:600;
+    font-family:'Inter',sans-serif; cursor:pointer; padding:6px 0; position:relative;
+  }
+  .tab-item.active{ color:var(--marigold); }
+  .tab-item.active svg{ stroke:var(--marigold); }
+  .tab-badge{
+    position:absolute; top:-6px; left:100%; margin-left:-6px; min-width:16px; height:16px; padding:0 4px;
+    border-radius:10px; background:var(--chili); color:#fff; font-size:9px; font-weight:700;
+    display:none; align-items:center; justify-content:center; font-family:'IBM Plex Mono',monospace;
+    white-space:nowrap; line-height:16px; text-align:center;
+  }
+  .screen-with-tabs{ padding-bottom:76px; }
+
   .toast{
     position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:999;
     background:var(--leaf); color:var(--cloud); padding:14px 18px; border-radius:10px;
@@ -318,7 +340,7 @@
   </section>
 
   <!-- HOME -->
-  <section class="screen" id="screen-home">
+  <section class="screen screen-with-tabs" id="screen-home">
     <div class="top-row">
       <div>
         <p class="eyebrow">DASHBOARD</p>
@@ -327,41 +349,11 @@
         <span class="type-badge" id="home-type-badge">Hotel</span>
       </div>
     </div>
-
-    <a class="nav-card" id="orders-nav-card" href="restaurant-orders.html">
-      <span class="nav-card-left">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F3EA" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-        Your Orders
-      </span>
-      <span class="nav-badge" id="pending-badge" style="display:none;">0 new</span>
-    </a>
-
-    <a class="nav-card" href="#" onclick="openStockScreen(); return false;">
-      <span class="nav-card-left">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F3EA" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
-        Stock Item
-      </span>
-    </a>
-
-    <a class="nav-card" id="zone-nav-card" href="#" onclick="openZoneScreen(); return false;" style="background:var(--marigold);">
-      <span class="nav-card-left" style="color:#1C1B19;">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1C1B19" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-        Delivery Zone
-      </span>
-      <span class="nav-badge" id="zone-status-badge" style="background:#1C1B19;">Not set</span>
-    </a>
-
-    <a class="nav-card" href="#" onclick="openAccountScreen(); return false;" style="background:var(--chili);">
-      <span class="nav-card-left">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F7F3EA" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
-        Account
-      </span>
-      <span class="nav-badge" id="account-pay-badge" style="display:none; background:#1C1B19;">0</span>
-    </a>
+    <p class="empty-text" style="padding:32px 24px 0;">Use the tabs below to manage orders, stock, and your account.</p>
   </section>
 
   <!-- STOCK ITEM -->
-  <section class="screen" id="screen-stock">
+  <section class="screen screen-with-tabs" id="screen-stock">
     <div class="px" style="padding-top:32px;">
       <button class="btn-back" onclick="showScreen('home')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -382,7 +374,7 @@
   </section>
 
   <!-- ACCOUNT -->
-  <section class="screen" id="screen-account">
+  <section class="screen screen-with-tabs" id="screen-account">
     <div class="px" style="padding-top:32px;">
       <button class="btn-back" onclick="showScreen('home')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -419,6 +411,16 @@
       </div>
     </div>
 
+    <div class="px" style="margin-top:4px;">
+      <a class="nav-card" id="zone-nav-card" href="#" onclick="openZoneScreen(); return false;" style="margin:0; background:var(--marigold);">
+        <span class="nav-card-left" style="color:#1C1B19;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1C1B19" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          Delivery Zone
+        </span>
+        <span class="nav-badge" id="zone-status-badge" style="background:#1C1B19;">Not set</span>
+      </a>
+    </div>
+
     <div class="px">
       <div class="section-row" style="padding:0 0 8px;">
         <h2 class="section-title">Payment (UPI)</h2>
@@ -446,7 +448,7 @@
   </section>
 
   <!-- ITEM FORM -->
-  <section class="screen" id="screen-item-form">
+  <section class="screen screen-with-tabs" id="screen-item-form">
     <div class="px" style="padding-top:32px;">
       <button class="btn-back" onclick="showScreen('home')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -478,9 +480,9 @@
   </section>
 
   <!-- DELIVERY ZONE -->
-  <section class="screen" id="screen-zone">
+  <section class="screen screen-with-tabs" id="screen-zone">
     <div class="px" style="padding-top:32px;">
-      <button class="btn-back" onclick="showScreen('home')">
+      <button class="btn-back" onclick="showScreen('account')">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
     </div>
@@ -514,6 +516,27 @@
     </div>
   </section>
 
+  <nav class="bottom-tab-bar" id="bottom-tab-bar">
+    <button class="tab-item" id="tab-orders" onclick="window.location.href='restaurant-orders.html'">
+      <span style="position:relative;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+        <span class="tab-badge" id="pending-badge">0 new</span>
+      </span>
+      Your Orders
+    </button>
+    <button class="tab-item" id="tab-stock" onclick="openStockScreen()">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>
+      Stock Item
+    </button>
+    <button class="tab-item" id="tab-account" onclick="openAccountScreen()">
+      <span style="position:relative;">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+        <span class="tab-badge" id="account-pay-badge">0</span>
+      </span>
+      Account
+    </button>
+  </nav>
+
 </div>
 
 <script type="module">
@@ -544,6 +567,17 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
   window.scrollTo(0, 0);
+
+  const tabBar = document.getElementById('bottom-tab-bar');
+  const tabScreens = { home: null, stock: 'tab-stock', 'item-form': 'tab-stock', account: 'tab-account', zone: 'tab-account' };
+  if (id in tabScreens) {
+    tabBar.classList.add('show');
+    document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+    const activeTab = tabScreens[id] ? document.getElementById(tabScreens[id]) : null;
+    if (activeTab) activeTab.classList.add('active');
+  } else {
+    tabBar.classList.remove('show');
+  }
 }
 
 function showToast(msg) {
@@ -1305,7 +1339,7 @@ document.getElementById('zone-save-btn').addEventListener('click', async () => {
     state.restaurant.deliveryZone = zonePoints;
     updateZoneBadge();
     showToast("Delivery zone saved");
-    showScreen('home');
+    showScreen('account');
   } catch (e) {
     errEl.textContent = "Couldn't save zone — check your connection and try again.";
     errEl.style.display = "block";
