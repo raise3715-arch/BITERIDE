@@ -306,6 +306,128 @@
     padding:14px 28px; border:none; border-radius:10px; background:var(--marigold);
     color:var(--ink); font-weight:700; font-size:15px; cursor:pointer; font-family:'Inter',sans-serif;
   }
+
+  /* ===== Support chat (partner side) ===== */
+  .support-fab{
+    position:fixed; bottom:24px; right:calc(50% - 210px + 20px); z-index:2500;
+    width:52px; height:52px; border-radius:50%; background:var(--marigold); border:none;
+    display:none; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow:0 6px 16px rgba(47,128,237,.45);
+  }
+  .support-fab.show{ display:flex; }
+  .support-fab .support-fab-dot{
+    position:absolute; top:4px; right:4px; width:11px; height:11px; border-radius:50%;
+    background:var(--chili); border:2px solid var(--ink); display:none;
+  }
+  .support-fab .support-fab-dot.show{ display:block; }
+  #support-chat-container{
+    display:none; position:fixed; inset:0; z-index:6000; background:#0B1622;
+    flex-direction:column;
+  }
+  #support-chat-container.show{ display:flex; }
+  #support-chat-container .sup-chat-header{
+    background:#0F2135; padding:14px 16px; border-bottom:1px solid var(--field-border);
+    display:flex; align-items:center; gap:12px; flex-shrink:0;
+  }
+  #support-chat-container .sup-back-btn{ background:none; border:none; color:var(--marigold); font-size:1.4rem; cursor:pointer; padding:0; line-height:1; }
+  #support-chat-container .sup-name{ font-weight:700; color:var(--cloud); font-size:1.02rem; font-family:'Inter',sans-serif; }
+  #support-chat-container .sup-sub{ font-size:.74rem; color:var(--muted); font-family:'Inter',sans-serif; }
+  .chat-messages{ flex:1; overflow-y:auto; padding:12px; display:flex; flex-direction:column; gap:2px; }
+  .chat-bubble-row{ display:flex; margin-bottom:6px; }
+  .chat-bubble-row.me{ justify-content:flex-end; }
+  .chat-bubble-row.them{ justify-content:flex-start; }
+  .chat-bubble{ max-width:78%; padding:8px 11px; border-radius:10px; font-size:.85rem; line-height:1.4; word-wrap:break-word; font-family:'Inter',sans-serif; }
+  .chat-bubble-row.me .chat-bubble{ background:var(--marigold); color:#fff; border-bottom-right-radius:2px; }
+  .chat-bubble-row.them .chat-bubble{ background:var(--field-bg); color:var(--cloud); border-bottom-left-radius:2px; border:1px solid var(--field-border); }
+  .chat-bubble .chat-time{ display:block; text-align:right; font-size:.66rem; color:rgba(255,255,255,.6); margin-top:3px; }
+  .chat-bubble-row.them .chat-bubble .chat-time{ color:var(--muted); }
+  .chat-input-bar{ display:flex; gap:8px; align-items:flex-end; padding:10px; background:#0F2135; border-top:1px solid var(--field-border); }
+  .chat-input-bar textarea{ flex:1; resize:none; max-height:80px; padding:10px 12px; background:var(--field-bg); color:var(--cloud); border:1px solid var(--field-border); border-radius:18px; font-size:.9rem; font-family:'Inter',sans-serif; }
+  .chat-send-btn{ background:var(--marigold); color:#fff; border:none; width:40px; height:40px; border-radius:50%; font-size:1rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+
+  /* ===== Operator Panel (terminal / hacker theme, scoped) ===== */
+  #operator-container{ display:none; position:fixed; inset:0; z-index:7000; background:#000000; font-family:'Courier New',Consolas,monospace; color:#33ff66; }
+  #operator-container.show{ display:block; }
+  #operator-container *{ box-sizing:border-box; }
+  #operator-container .op-home{ height:100vh; max-width:900px; margin:0 auto; display:flex; flex-direction:column; padding:30px 20px; overflow-y:auto; }
+  #operator-container .op-home-header{ display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:26px; border-bottom:1px solid #124a24; padding-bottom:16px; }
+  #operator-container .op-home-header h2{ font-size:1.7rem; color:#00ff41; letter-spacing:2px; text-shadow:0 0 8px rgba(0,255,65,.5); }
+  #operator-container .op-home-header h2::before{ content:'~/ '; color:#1f7a3d; }
+  #operator-container .op-home-header p{ color:#1f7a3d; font-size:.8rem; letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
+  #operator-container .op-logout-btn{ background:#000; color:#8b8b8b; border:1px solid #333; padding:7px 12px; cursor:pointer; font-family:inherit; font-size:.78rem; text-transform:uppercase; }
+  #operator-container .op-home-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px; margin-top:6px; }
+  #operator-container .op-home-card{ background:#020a04; border:1px solid #124a24; padding:26px 16px; text-align:center; cursor:pointer; transition:all .2s ease; }
+  #operator-container .op-home-card:hover{ background:#051f0a; border-color:#00ff41; box-shadow:0 0 15px rgba(0,255,65,.25); }
+  #operator-container .op-home-icon{ font-size:2rem; margin-bottom:8px; filter:grayscale(1) brightness(1.6) sepia(1) hue-rotate(70deg) saturate(4); }
+  #operator-container .op-home-card h3{ color:#33ff66; font-size:.98rem; margin-bottom:4px; text-transform:uppercase; letter-spacing:1px; }
+  #operator-container .op-home-card p{ color:#1f7a3d; font-size:.76rem; line-height:1.4; }
+  #operator-container .op-section{ display:none; height:100vh; max-width:900px; margin:0 auto; flex-direction:column; }
+  #operator-container .op-section.active{ display:flex; }
+  #operator-container .op-section-header{ background:#020a04; padding:16px 18px; display:flex; align-items:center; gap:12px; border-bottom:1px solid #124a24; flex-shrink:0; }
+  #operator-container .op-section-header h2{ font-size:1rem; text-transform:uppercase; letter-spacing:1px; color:#33ff66; }
+  #operator-container .op-back-btn{ background:none; border:none; color:#33ff66; font-size:1.3rem; cursor:pointer; line-height:1; }
+  #operator-container .op-section-body{ flex:1; overflow-y:auto; padding:18px; }
+  #operator-container textarea{ width:100%; padding:10px; background:#0b0f19; color:#e2e8f0; border:1px solid #334155; font-size:.78rem; font-family:monospace; margin-bottom:10px; resize:vertical; }
+  #operator-container input[type="file"]{ color:#33ff66; margin-bottom:10px; font-size:.8rem; }
+  #operator-container .op-btn{ background:#000; color:#33ff66; border:1px solid #33ff66; padding:10px 14px; cursor:pointer; font-weight:600; font-family:inherit; font-size:.85rem; margin-right:8px; margin-bottom:8px; }
+  #operator-container .op-btn:hover{ background:#00ff41; color:#000; }
+  #operator-container .op-btn.op-btn-push{ border-color:#7c3aed; color:#a78bfa; }
+  #operator-container .op-btn.op-btn-push:hover{ background:#7c3aed; color:#fff; }
+  #operator-container .op-btn.op-btn-danger{ border-color:#dc2626; color:#f87171; }
+  #operator-container .op-btn.op-btn-danger:hover{ background:#dc2626; color:#fff; }
+  #operator-container p.op-note{ font-size:.74rem; color:#64748b; margin-bottom:12px; line-height:1.5; font-family:'Inter',sans-serif; }
+  #operator-container .op-partner-item{ padding:12px 14px; border:1px solid #124a24; margin-bottom:8px; cursor:pointer; }
+  #operator-container .op-partner-item:hover{ background:#051505; }
+  #operator-container .op-partner-top{ display:flex; justify-content:space-between; align-items:baseline; }
+  #operator-container .op-partner-name{ font-weight:700; font-size:.92rem; color:#33ff66; }
+  #operator-container .op-partner-name::before{ content:'$ '; color:#1f7a3d; }
+  #operator-container .op-partner-type{ font-size:.68rem; color:#1f7a3d; text-transform:uppercase; letter-spacing:.5px; }
+  #operator-container .op-partner-sub{ font-size:.76rem; color:#1f7a3d; margin-top:2px; }
+  #operator-container .op-search-box{ padding:0 0 12px; }
+  #operator-container .op-search-box input{ width:100%; padding:9px 10px; background:#020a04; color:#33ff66; border:1px solid #124a24; font-size:.85rem; font-family:inherit; }
+  #operator-container .op-search-box input::placeholder{ color:#1f7a3d; }
+  #operator-container .op-search-box input:focus{ outline:none; border-color:#00ff41; }
+  #operator-container .op-modal-overlay{ position:fixed; inset:0; background:rgba(0,0,0,.85); display:none; justify-content:center; align-items:center; z-index:7500; padding:20px; }
+  #operator-container .op-modal-overlay.show{ display:flex; }
+  #operator-container .op-modal-card{ background:#000; color:#33ff66; padding:20px; width:100%; max-width:380px; border:1px solid #00ff41; box-shadow:0 0 20px rgba(0,255,65,.2); max-height:88vh; overflow-y:auto; }
+  #operator-container .op-modal-card h3{ margin-bottom:12px; color:#39ff14; text-transform:uppercase; letter-spacing:1px; font-size:.95rem; }
+  #operator-container .op-modal-card .op-mc-row{ font-size:.8rem; color:#a3b3a8; margin-bottom:8px; line-height:1.5; }
+  #operator-container .op-modal-card .op-mc-row b{ color:#33ff66; }
+  #operator-container .op-empty{ padding:24px 10px; text-align:center; color:#1f7a3d; font-size:.85rem; }
+  /* Operator conversation list / chat panel */
+  #operator-container .op-app{ display:flex; height:100vh; max-width:900px; margin:0 auto; }
+  #operator-container .op-sidebar{ width:280px; flex-shrink:0; border-right:1px solid #124a24; display:flex; flex-direction:column; background:#000; }
+  #operator-container .op-conv-list{ flex:1; overflow-y:auto; }
+  #operator-container .op-conv-item{ display:flex; flex-direction:column; padding:12px 14px; border-bottom:1px solid #124a24; cursor:pointer; }
+  #operator-container .op-conv-item:hover{ background:#051505; }
+  #operator-container .op-conv-item.active{ background:#08260f; border-left:3px solid #00ff41; }
+  #operator-container .op-conv-name{ font-weight:700; font-size:.88rem; color:#33ff66; }
+  #operator-container .op-conv-name::before{ content:'$ '; color:#1f7a3d; }
+  #operator-container .op-conv-preview{ font-size:.74rem; color:#1f7a3d; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #operator-container .op-chat-panel{ flex:1; display:none; flex-direction:column; background:#000; }
+  #operator-container .op-chat-panel.active{ display:flex; }
+  #operator-container .op-chat-header{ background:#020a04; padding:14px 16px; border-bottom:1px solid #124a24; display:flex; align-items:center; gap:10px; }
+  #operator-container .op-chat-header .op-name{ font-weight:700; color:#33ff66; font-size:.95rem; }
+  #operator-container .op-chat-messages{ flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; }
+  #operator-container .op-chat-bubble-row{ display:flex; margin-bottom:8px; }
+  #operator-container .op-chat-bubble-row.me{ justify-content:flex-end; }
+  #operator-container .op-chat-bubble-row.them{ justify-content:flex-start; }
+  #operator-container .op-chat-bubble{ max-width:70%; padding:9px 12px; font-size:.85rem; line-height:1.4; border:1px solid #124a24; word-wrap:break-word; }
+  #operator-container .op-chat-bubble-row.me .op-chat-bubble{ background:#051f0a; color:#39ff14; border-color:#1f7a3d; }
+  #operator-container .op-chat-bubble-row.them .op-chat-bubble{ background:#0a0a0a; color:#33ff66; border-color:#2a2a2a; }
+  #operator-container .op-chat-bubble .op-chat-time{ display:block; text-align:right; font-size:.65rem; color:#1f7a3d; margin-top:3px; }
+  #operator-container .op-chat-input-bar{ display:flex; gap:10px; align-items:flex-end; padding:12px 14px; background:#020a04; border-top:1px solid #124a24; }
+  #operator-container .op-chat-input-bar textarea{ flex:1; margin:0; max-height:90px; }
+  #operator-container .op-chat-send-btn{ background:#000; color:#00ff41; border:1px solid #00ff41; width:40px; height:40px; font-size:1rem; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-family:inherit; }
+  #operator-container .op-no-chat-selected{ flex:1; display:flex; align-items:center; justify-content:center; color:#1f7a3d; font-size:.9rem; text-align:center; padding:20px; }
+  @media (max-width:640px){
+    #operator-container .op-app{ max-width:100%; position:relative; }
+    #operator-container .op-sidebar{ width:100%; position:absolute; top:0; left:0; height:100%; z-index:5; transition:transform .25s ease; }
+    #operator-container .op-sidebar.hide-mobile{ transform:translateX(-100%); }
+    #operator-container .op-chat-panel{ width:100%; }
+    #operator-container .op-back-to-list{ display:inline-block; background:none; border:none; color:#33ff66; font-size:1.25rem; cursor:pointer; margin-right:6px; }
+  }
+  #operator-container .op-back-to-list{ display:none; }
 </style>
 </head>
 <body>
@@ -652,6 +774,123 @@
 
 </div>
 
+<!-- SUPPORT CHAT (restaurant partner side) -->
+<button class="support-fab" id="support-fab" title="Chat with Afsal (Support)">
+  <span class="support-fab-dot" id="support-fab-dot"></span>
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+</button>
+<div id="support-chat-container">
+  <div class="sup-chat-header">
+    <button class="sup-back-btn" id="support-chat-back" aria-label="Back">←</button>
+    <div>
+      <div class="sup-name">AFSAL</div>
+      <div class="sup-sub">Support Agent</div>
+    </div>
+  </div>
+  <div id="partner-messages-list" class="chat-messages"><p style="color:#6E8CAE;text-align:center;font-family:'Inter',sans-serif;font-size:.85rem;">Loading messages...</p></div>
+  <div class="chat-input-bar">
+    <textarea id="partner_msg_text" rows="1" placeholder="Type a message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendPartnerSupportMessage();}"></textarea>
+    <button class="chat-send-btn" onclick="sendPartnerSupportMessage()" aria-label="Send">&#10148;</button>
+  </div>
+</div>
+
+<!-- ===================== OPERATOR PANEL ===================== -->
+<div id="operator-container">
+  <!-- OPERATOR HOME -->
+  <div class="op-section active" id="op-section-home">
+    <div class="op-home">
+      <div class="op-home-header">
+        <div>
+          <h2>Operator Panel</h2>
+          <p>Restaurant Partner &middot; Texi and Food</p>
+        </div>
+        <button class="op-logout-btn" onclick="opLogout()">Logout</button>
+      </div>
+      <div class="op-home-grid">
+        <div class="op-home-card" onclick="opOpenSection('push')">
+          <div class="op-home-icon">⬆️</div>
+          <h3>Push App Update</h3>
+          <p>Push new code (index.html) live to every restaurant partner</p>
+        </div>
+        <div class="op-home-card" onclick="opOpenSection('partners')">
+          <div class="op-home-icon">🏬</div>
+          <h3>Restaurant Partners</h3>
+          <p>View, suspend or remove restaurant accounts</p>
+        </div>
+        <div class="op-home-card" onclick="opOpenSection('support')">
+          <div class="op-home-icon">💬</div>
+          <h3>Support Chat</h3>
+          <p>Chat live with any restaurant partner</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PUSH APP UPDATE -->
+  <div class="op-section" id="op-section-push">
+    <div class="op-section-header">
+      <button class="op-back-btn" onclick="opOpenSection('home')">←</button>
+      <h2>Push App Update</h2>
+    </div>
+    <div class="op-section-body">
+      <p class="op-note">"Push Update" replaces the app's code (app_config/html) for every restaurant partner automatically the next time they open or refresh it. "View Current Code" loads the currently-live pushed code into the box below so you can inspect or edit it before re-pushing. "Delete Pushed Update" removes app_config/html entirely (partners then keep using whatever copy of the app they already have loaded/cached, until you push again) — existing restaurant data (menu, orders, gpay, etc. under restaurants/*) is stored separately and is never touched by any of these actions.</p>
+      <input type="file" id="op-app-update-file" accept=".html" onchange="opHandleFileUpload(event)">
+      <textarea id="op-app-update-code" oninput="opUpdateAppCodeSizeLabel()" placeholder="Upload the index.html file above, click 'View Current Code' to load what's live, or paste the FULL new index.html source code here..." style="height:260px;"></textarea>
+      <p class="op-note" id="op-app-update-size" style="margin-bottom:6px;">0 KB</p>
+      <div>
+        <button type="button" class="op-btn" onclick="opLoadCurrentAppCode()">📄 View Current Code</button>
+        <button type="button" class="op-btn op-btn-push" onclick="opPushAppUpdate()">🚀 Push Update</button>
+        <button type="button" class="op-btn op-btn-danger" onclick="opDeletePushedAppUpdate()">🗑 Delete Pushed Update</button>
+      </div>
+      <p class="op-note" id="op-app-update-status" style="margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <!-- RESTAURANT PARTNERS -->
+  <div class="op-section" id="op-section-partners">
+    <div class="op-section-header">
+      <button class="op-back-btn" onclick="opOpenSection('home')">←</button>
+      <h2>Restaurant Partners</h2>
+    </div>
+    <div class="op-section-body">
+      <div class="op-search-box"><input type="text" id="op-partners-search" placeholder="Search restaurants..." oninput="opRenderPartnersList()"></div>
+      <div id="op-partners-list"></div>
+    </div>
+  </div>
+
+  <!-- SUPPORT CHAT (operator side) -->
+  <div class="op-section" id="op-section-support">
+    <div class="op-app">
+      <div class="op-sidebar" id="op-chat-sidebar">
+        <div class="op-search-box" style="padding:12px 12px 8px;"><input type="text" id="op-chat-search" placeholder="Search restaurants..." oninput="opRenderChatConvList()"></div>
+        <div class="op-conv-list" id="op-conv-list"></div>
+        <div style="padding:10px 12px;"><button class="op-btn" style="width:100%;margin:0;" onclick="opOpenSection('home')">← Operator Home</button></div>
+      </div>
+      <div class="op-chat-panel" id="op-chat-panel">
+        <div class="op-no-chat-selected" id="op-no-chat">Select a restaurant on the left to view/reply to their support chat.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Partner detail modal -->
+  <div class="op-modal-overlay" id="op-partner-modal">
+    <div class="op-modal-card">
+      <h3 id="op-pm-title">Restaurant</h3>
+      <div class="op-mc-row"><b>Username:</b> <span id="op-pm-username"></span></div>
+      <div class="op-mc-row"><b>Type:</b> <span id="op-pm-type"></span></div>
+      <div class="op-mc-row"><b>Address:</b> <span id="op-pm-address"></span></div>
+      <div class="op-mc-row"><b>UPI ID:</b> <span id="op-pm-gpay"></span></div>
+      <div class="op-mc-row"><b>Status:</b> <span id="op-pm-status"></span></div>
+      <div style="margin-top:14px;">
+        <button type="button" class="op-btn" id="op-pm-toggle-btn" onclick="opTogglePartnerStatus()"></button>
+        <button type="button" class="op-btn" onclick="opOpenChatWith(opCurrentPartnerId); document.getElementById('op-partner-modal').classList.remove('show'); opOpenSection('support');">💬 Chat</button>
+        <button type="button" class="op-btn op-btn-danger" onclick="opDeletePartner()">🗑 Delete Account</button>
+        <button type="button" class="op-btn" style="border-color:#8b8b8b;color:#8b8b8b;" onclick="document.getElementById('op-partner-modal').classList.remove('show')">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, onValue, push, set, get, update, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -830,8 +1069,13 @@ setTimeout(() => {
 }, 9000);
 
 function init() {
-  const savedId = localStorage.getItem('asfood_partner_id');
-  if (savedId) {
+  checkForPartnerAppUpdate();
+
+  const isOperator = localStorage.getItem('asfood_is_operator') === '1';
+  const savedId = isOperator ? null : localStorage.getItem('asfood_partner_id');
+  if (isOperator) {
+    opEnterPanel();
+  } else if (savedId) {
     const { db, ref, get } = window.fb;
 
     // If we have a cached copy of this restaurant's data, log the user in
@@ -887,6 +1131,10 @@ function init() {
     showScreen('login');
   });
 
+  // Support chat (partner side)
+  document.getElementById('support-fab').addEventListener('click', openPartnerSupportChat);
+  document.getElementById('support-chat-back').addEventListener('click', closePartnerSupportChat);
+
   // Item form
   document.getElementById('photo-upload-wrap').addEventListener('click', () => document.getElementById('item-photo-input').click());
   document.getElementById('item-photo-input').addEventListener('change', handlePhotoSelect);
@@ -920,6 +1168,9 @@ function useGps() {
 }
 
 // ---------- LOGIN ----------
+const OPERATOR_USERNAME = "AFSALKN";
+const OPERATOR_PASSWORD = "AFsa12@*";
+
 async function doLogin() {
   const username = document.getElementById('login-username').value.trim();
   const password = document.getElementById('login-password').value;
@@ -928,6 +1179,13 @@ async function doLogin() {
   if (!username || !password) {
     errEl.textContent = "Enter username and password";
     errEl.style.display = "block";
+    return;
+  }
+  if (username === OPERATOR_USERNAME && password === OPERATOR_PASSWORD) {
+    localStorage.setItem('asfood_is_operator', '1');
+    document.getElementById('login-username').value = '';
+    document.getElementById('login-password').value = '';
+    opEnterPanel();
     return;
   }
   const btn = document.getElementById('login-submit');
@@ -986,8 +1244,10 @@ function logInRestaurant(id, data) {
     listenMenu();
     listenOrdersBadge();
     listenPaymentPending();
+    listenPartnerSupportMessages();
   }
   updateZoneBadge();
+  document.getElementById('support-fab').classList.add('show');
 }
 
 function openStockScreen() {
@@ -1709,6 +1969,328 @@ document.getElementById('zone-save-btn').addEventListener('click', async () => {
     btn.textContent = "Save delivery zone";
   }
 });
+
+/* =========================================================
+   APP UPDATE CHECK (partner app auto-applies pushed code,
+   same mechanism the Operator Panel below writes to)
+   ========================================================= */
+let partnerAppIsUpdating = false;
+function checkForPartnerAppUpdate() {
+  const tryCheck = () => {
+    if (!window.fb) { setTimeout(tryCheck, 500); return; }
+    const { db, ref, get } = window.fb;
+    get(ref(db, 'app_config/html')).then(snap => {
+      const data = snap.val();
+      const localVersion = parseInt(localStorage.getItem('asfood_partner_html_version') || '0', 10);
+      if (data && data.version && data.version > localVersion && data.code) {
+        applyPartnerAppUpdate(data);
+      }
+    }).catch(() => {});
+  };
+  tryCheck();
+}
+function applyPartnerAppUpdate(data) {
+  if (partnerAppIsUpdating) return;
+  partnerAppIsUpdating = true;
+  (async () => {
+    try {
+      localStorage.setItem('asfood_partner_html_version', String(data.version));
+      if ('caches' in window && data.code) {
+        const cache = await caches.open('asfood-partner-cache-v1');
+        const resp = new Response(data.code, { headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+        await cache.put('./', resp.clone());
+        await cache.put('./index.html', resp.clone());
+      }
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'ACCEPT_PUSH_VERSION', version: data.version });
+      }
+    } catch (e) {
+      console.log('Applying pushed code to cache failed:', e && e.message);
+    }
+    location.reload();
+  })();
+}
+
+/* =========================================================
+   SUPPORT CHAT — restaurant partner side
+   ========================================================= */
+let partnerSupportUnsub = null;
+let partnerSupportLastSeenCount = 0;
+function listenPartnerSupportMessages() {
+  if (!state.restId) return;
+  const { db, ref, onValue } = window.fb;
+  onValue(ref(db, 'support/' + state.restId + '/messages'), snap => {
+    const msgs = [];
+    snap.forEach(child => { msgs.push(Object.assign({ _id: child.key }, child.val())); });
+    msgs.sort((a, b) => (a.time || 0) - (b.time || 0));
+    window._partnerSupportMsgs = msgs;
+    const lastReadKey = 'asfood_support_lastread_' + state.restId;
+    let lastRead = 0;
+    try { lastRead = parseInt(localStorage.getItem(lastReadKey) || '0', 10); } catch (e) {}
+    const unread = msgs.some(m => m.sender === 'operator' && (m.time || 0) > lastRead);
+    document.getElementById('support-fab-dot').classList.toggle('show', unread);
+    if (document.getElementById('support-chat-container').classList.contains('show')) {
+      renderPartnerSupportMessages(msgs);
+    }
+  });
+}
+function renderPartnerSupportMessages(msgs) {
+  const list = document.getElementById('partner-messages-list');
+  if (!msgs || !msgs.length) {
+    list.innerHTML = '<p style="color:#6E8CAE;text-align:center;font-family:\'Inter\',sans-serif;font-size:.85rem;margin-top:20px;">No messages yet. Say hello 👋</p>';
+    return;
+  }
+  list.innerHTML = msgs.map(m => {
+    const mine = m.sender === 'partner';
+    const t = m.time ? new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="chat-bubble-row ${mine ? 'me' : 'them'}"><div class="chat-bubble">${escapeHtml(m.text || '')}<span class="chat-time">${t}</span></div></div>`;
+  }).join('');
+  list.scrollTop = list.scrollHeight;
+}
+function escapeHtml(s) {
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+function openPartnerSupportChat() {
+  document.getElementById('support-chat-container').classList.add('show');
+  document.getElementById('support-fab-dot').classList.remove('show');
+  try { localStorage.setItem('asfood_support_lastread_' + state.restId, String(Date.now())); } catch (e) {}
+  renderPartnerSupportMessages(window._partnerSupportMsgs || []);
+}
+function closePartnerSupportChat() {
+  document.getElementById('support-chat-container').classList.remove('show');
+}
+function sendPartnerSupportMessage() {
+  const ta = document.getElementById('partner_msg_text');
+  const text = ta.value.trim();
+  if (!text || !state.restId) return;
+  const { db, ref, push, set } = window.fb;
+  const newRef = push(ref(db, 'support/' + state.restId + '/messages'));
+  set(newRef, { sender: 'partner', text, time: Date.now() }).catch(() => {});
+  ta.value = '';
+}
+
+/* =========================================================
+   OPERATOR PANEL
+   ========================================================= */
+let opCurrentPartnerId = null;
+let opAllPartners = [];
+let opChatUnsub = {};
+let opActiveChatId = null;
+
+function opEnterPanel() {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('operator-container').classList.add('show');
+  opOpenSection('home');
+  opListenPartners();
+}
+function opLogout() {
+  localStorage.removeItem('asfood_is_operator');
+  document.getElementById('operator-container').classList.remove('show');
+  showScreen('login');
+}
+function opOpenSection(name) {
+  document.querySelectorAll('#operator-container .op-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('op-section-' + name).classList.add('active');
+  if (name === 'push') opUpdateAppCodeSizeLabel();
+  if (name === 'partners') opRenderPartnersList();
+  if (name === 'support') opRenderChatConvList();
+}
+
+/* ---- Push App Update ---- */
+function opHandleFileUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('op-app-update-code').value = ev.target.result;
+    opUpdateAppCodeSizeLabel();
+  };
+  reader.readAsText(file);
+}
+function opUpdateAppCodeSizeLabel() {
+  const code = document.getElementById('op-app-update-code').value || '';
+  const kb = (new Blob([code]).size / 1024).toFixed(1);
+  document.getElementById('op-app-update-size').textContent = kb + ' KB';
+}
+function opLoadCurrentAppCode() {
+  const status = document.getElementById('op-app-update-status');
+  status.textContent = 'Loading current live code...';
+  const { db, ref, get } = window.fb;
+  get(ref(db, 'app_config/html')).then(snap => {
+    const data = snap.val();
+    if (data && data.code) {
+      document.getElementById('op-app-update-code').value = data.code;
+      opUpdateAppCodeSizeLabel();
+      status.textContent = 'Loaded live version ' + data.version + (data.updatedAt ? (' (pushed ' + data.updatedAt + ')') : '') + '.';
+    } else {
+      status.textContent = 'No update has been pushed yet.';
+    }
+  }).catch(err => { status.textContent = 'Error: ' + err.message; });
+}
+function opPushAppUpdate() {
+  const code = document.getElementById('op-app-update-code').value;
+  const status = document.getElementById('op-app-update-status');
+  if (!code || code.trim().length < 100) {
+    status.textContent = 'Paste or upload the full index.html source code first.';
+    return;
+  }
+  if (!confirm('Push this code live to every restaurant partner now?\n\nThey will get it automatically the next time they open or refresh their app.')) return;
+  status.textContent = 'Pushing...';
+  const { db, ref, get, set } = window.fb;
+  get(ref(db, 'app_config/html')).then(snap => {
+    const current = snap.val();
+    const newVersion = (current && current.version ? current.version : 0) + 1;
+    return set(ref(db, 'app_config/html'), {
+      code,
+      version: newVersion,
+      updatedAt: new Date().toLocaleString()
+    });
+  }).then(() => {
+    status.textContent = 'Pushed! Restaurant partners will get this update automatically next time they open/refresh their app.';
+  }).catch(err => { status.textContent = 'Error: ' + err.message; });
+}
+function opDeletePushedAppUpdate() {
+  if (!confirm("Delete the pushed app_config/html entirely?\n\nThis removes the code you pushed via this panel. It does NOT touch any restaurant's menu/order data. Partners who already have the app open/cached will keep working with their current copy until you push something new.")) return;
+  const { db, ref, remove } = window.fb;
+  remove(ref(db, 'app_config/html')).then(() => {
+    document.getElementById('op-app-update-status').textContent = 'Pushed update deleted.';
+    document.getElementById('op-app-update-code').value = '';
+    opUpdateAppCodeSizeLabel();
+  }).catch(err => { document.getElementById('op-app-update-status').textContent = 'Error: ' + err.message; });
+}
+
+/* ---- Restaurant Partners list ---- */
+function opListenPartners() {
+  const { db, ref, onValue } = window.fb;
+  onValue(ref(db, 'restaurants'), snap => {
+    const list = [];
+    snap.forEach(child => { list.push(Object.assign({ _id: child.key }, child.val())); });
+    opAllPartners = list;
+    opRenderPartnersList();
+    opRenderChatConvList();
+  });
+}
+function opTypeLabel(t) { return t === 'groceries' ? 'Groceries' : t === 'online_shop' ? 'Online Shop' : 'Hotel'; }
+function opRenderPartnersList() {
+  const wrap = document.getElementById('op-partners-list');
+  if (!wrap) return;
+  const q = (document.getElementById('op-partners-search').value || '').toLowerCase();
+  const filtered = opAllPartners.filter(p => !q || (p.restaurantName || '').toLowerCase().includes(q) || p._id.toLowerCase().includes(q));
+  if (!filtered.length) { wrap.innerHTML = '<div class="op-empty">No restaurant partners found.</div>'; return; }
+  wrap.innerHTML = filtered.map(p => `
+    <div class="op-partner-item" onclick="opShowPartnerDetail('${p._id}')">
+      <div class="op-partner-top">
+        <span class="op-partner-name">${escapeHtml(p.restaurantName || p._id)}</span>
+        <span class="op-partner-type">${opTypeLabel(p.businessType)}</span>
+      </div>
+      <div class="op-partner-sub">${escapeHtml(p.address || '')} ${p.status === 'suspended' ? ' · ⛔ SUSPENDED' : ''}</div>
+    </div>
+  `).join('');
+}
+function opShowPartnerDetail(id) {
+  const p = opAllPartners.find(x => x._id === id);
+  if (!p) return;
+  opCurrentPartnerId = id;
+  document.getElementById('op-pm-title').textContent = p.restaurantName || id;
+  document.getElementById('op-pm-username').textContent = id;
+  document.getElementById('op-pm-type').textContent = opTypeLabel(p.businessType);
+  document.getElementById('op-pm-address').textContent = p.address || '—';
+  document.getElementById('op-pm-gpay').textContent = p.gpayNumber || '—';
+  const suspended = p.status === 'suspended';
+  document.getElementById('op-pm-status').textContent = suspended ? 'Suspended' : 'Active';
+  const toggleBtn = document.getElementById('op-pm-toggle-btn');
+  toggleBtn.textContent = suspended ? '✅ Reactivate Account' : '⛔ Suspend Account';
+  document.getElementById('op-partner-modal').classList.add('show');
+}
+function opTogglePartnerStatus() {
+  const p = opAllPartners.find(x => x._id === opCurrentPartnerId);
+  if (!p) return;
+  const newStatus = p.status === 'suspended' ? 'active' : 'suspended';
+  const { db, ref, update } = window.fb;
+  update(ref(db, 'restaurants/' + opCurrentPartnerId), { status: newStatus }).then(() => {
+    document.getElementById('op-partner-modal').classList.remove('show');
+  }).catch(err => alert('Error: ' + err.message));
+}
+function opDeletePartner() {
+  if (!opCurrentPartnerId) return;
+  if (!confirm('Permanently delete this restaurant account (' + opCurrentPartnerId + ')? This removes their menu, orders and profile. This cannot be undone.')) return;
+  const { db, ref, remove } = window.fb;
+  remove(ref(db, 'restaurants/' + opCurrentPartnerId)).then(() => {
+    document.getElementById('op-partner-modal').classList.remove('show');
+  }).catch(err => alert('Error: ' + err.message));
+}
+
+/* ---- Support Chat — operator side ---- */
+function opRenderChatConvList() {
+  const wrap = document.getElementById('op-conv-list');
+  if (!wrap) return;
+  const q = (document.getElementById('op-chat-search').value || '').toLowerCase();
+  const filtered = opAllPartners.filter(p => !q || (p.restaurantName || '').toLowerCase().includes(q) || p._id.toLowerCase().includes(q));
+  if (!filtered.length) { wrap.innerHTML = '<div class="op-empty">No restaurant partners yet.</div>'; return; }
+  wrap.innerHTML = filtered.map(p => `
+    <div class="op-conv-item ${opActiveChatId === p._id ? 'active' : ''}" onclick="opOpenChatWith('${p._id}')">
+      <span class="op-conv-name">${escapeHtml(p.restaurantName || p._id)}</span>
+      <span class="op-conv-preview">${opTypeLabel(p.businessType)}</span>
+    </div>
+  `).join('');
+}
+function opOpenChatWith(restId) {
+  opActiveChatId = restId;
+  opRenderChatConvList();
+  document.getElementById('op-chat-sidebar').classList.add('hide-mobile');
+  const p = opAllPartners.find(x => x._id === restId);
+  const panel = document.getElementById('op-chat-panel');
+  panel.classList.add('active');
+  panel.innerHTML = `
+    <div class="op-chat-header">
+      <button class="op-back-to-list" onclick="opCloseChatPanel()">←</button>
+      <div class="op-name">${escapeHtml((p && p.restaurantName) || restId)}</div>
+    </div>
+    <div class="op-chat-messages" id="op-chat-messages"></div>
+    <div class="op-chat-input-bar">
+      <textarea id="op-chat-input" rows="1" placeholder="Type a message..." onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();opSendChatMessage();}"></textarea>
+      <button class="op-chat-send-btn" onclick="opSendChatMessage()">&#10148;</button>
+    </div>
+  `;
+  const { db, ref, onValue } = window.fb;
+  if (opChatUnsub[restId]) { /* already listening */ } else {
+    opChatUnsub[restId] = onValue(ref(db, 'support/' + restId + '/messages'), snap => {
+      const msgs = [];
+      snap.forEach(child => { msgs.push(Object.assign({ _id: child.key }, child.val())); });
+      msgs.sort((a, b) => (a.time || 0) - (b.time || 0));
+      if (opActiveChatId === restId) opRenderChatMessages(msgs);
+    });
+  }
+}
+function opRenderChatMessages(msgs) {
+  const el = document.getElementById('op-chat-messages');
+  if (!el) return;
+  if (!msgs.length) {
+    el.innerHTML = '<p style="color:#1f7a3d;text-align:center;margin-top:20px;">No messages yet.</p>';
+    return;
+  }
+  el.innerHTML = msgs.map(m => {
+    const mine = m.sender === 'operator';
+    const t = m.time ? new Date(m.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="op-chat-bubble-row ${mine ? 'me' : 'them'}"><div class="op-chat-bubble">${escapeHtml(m.text || '')}<span class="op-chat-time">${t}</span></div></div>`;
+  }).join('');
+  el.scrollTop = el.scrollHeight;
+}
+function opSendChatMessage() {
+  const ta = document.getElementById('op-chat-input');
+  const text = ta.value.trim();
+  if (!text || !opActiveChatId) return;
+  const { db, ref, push, set } = window.fb;
+  const newRef = push(ref(db, 'support/' + opActiveChatId + '/messages'));
+  set(newRef, { sender: 'operator', text, time: Date.now() }).catch(() => {});
+  ta.value = '';
+}
+function opCloseChatPanel() {
+  document.getElementById('op-chat-panel').classList.remove('active');
+  document.getElementById('op-chat-sidebar').classList.remove('hide-mobile');
+}
 </script>
 <script>
 (function(){
