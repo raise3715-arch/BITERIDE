@@ -648,6 +648,17 @@
       </a>
     </div>
 
+    <div class="px" style="margin-top:12px;">
+      <a class="nav-card" id="due-nav-card" href="#" onclick="openDueScreen(); return false;" style="margin:0; background:var(--chili);">
+        <span class="nav-card-left" style="color:#fff;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          Due Amount
+        </span>
+        <span class="nav-badge" id="due-status-badge" style="background:#fff;color:#E5484D;">₹0</span>
+      </a>
+    </div>
+
+
     <div class="px">
       <div class="section-row" style="padding:0 0 8px;">
         <h2 class="section-title">Payment (UPI)</h2>
@@ -751,6 +762,29 @@
     </div>
   </section>
 
+  <!-- DUE AMOUNT -->
+  <section class="screen screen-with-tabs" id="screen-due">
+    <div class="px" style="padding-top:32px;">
+      <button class="btn-back" onclick="showScreen('account')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#2F80ED" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+    </div>
+    <div class="header">
+      <p class="eyebrow">DUE AMOUNT</p>
+      <h1 class="title">What you owe the platform</h1>
+    </div>
+    <div class="px">
+      <div class="pay-pending-card" style="border-color:var(--chili);">
+        <p class="hint-text" style="margin:0 0 4px;">Total due</p>
+        <p style="color:#fff; font-family:'Fraunces',serif; font-size:32px; font-weight:700; margin:0;" id="due-total-amount">₹0</p>
+        <p class="hint-text" style="margin-top:6px;" id="due-order-count">From 0 delivered orders</p>
+      </div>
+      <p class="hint-text" style="margin-top:14px;">Every delivered order adds the operator's extra amount for that order to your due. This clears when the operator marks a settlement against your account.</p>
+      <h2 class="section-title" style="margin-top:20px; font-size:16px;">Settlement history</h2>
+      <div id="due-settlements-list" style="margin-top:10px; display:flex; flex-direction:column; gap:8px;"></div>
+    </div>
+  </section>
+
   <nav class="bottom-tab-bar" id="bottom-tab-bar">
     <button class="tab-item" id="tab-orders" onclick="window.location.href='restaurant-orders.html'">
       <span style="position:relative;">
@@ -812,6 +846,11 @@
           <h3>Push App Update</h3>
           <p>Push new code (index.html) live to every restaurant partner</p>
         </div>
+        <div class="op-home-card" onclick="opOpenSection('pricing')">
+          <div class="op-home-icon">💰</div>
+          <h3>Extra Amount</h3>
+          <p>Set/edit the ₹ amount added on top of every item price shown to customers</p>
+        </div>
         <div class="op-home-card" onclick="opOpenSection('partners')">
           <div class="op-home-icon">🏬</div>
           <h3>Restaurant Partners</h3>
@@ -843,6 +882,24 @@
         <button type="button" class="op-btn op-btn-danger" onclick="opDeletePushedAppUpdate()">🗑 Delete Pushed Update</button>
       </div>
       <p class="op-note" id="op-app-update-status" style="margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <!-- EXTRA AMOUNT (PAISA) -->
+  <div class="op-section" id="op-section-pricing">
+    <div class="op-section-header">
+      <button class="op-back-btn" onclick="opOpenSection('home')">←</button>
+      <h2>Extra Amount</h2>
+    </div>
+    <div class="op-section-body">
+      <p class="op-note">Set a flat ₹ amount here. It gets added on top of every menu item's price automatically in the customer app — restaurants keep setting their own price as usual in their app, unaffected. Leave as 0 to add nothing.</p>
+      <div class="op-search-box" style="margin-bottom:10px;">
+        <input type="number" id="op-extra-amount-input" placeholder="Amount in ₹ (e.g. 5)" min="0" step="0.5">
+      </div>
+      <div>
+        <button type="button" class="op-btn op-btn-push" onclick="opSaveExtraAmount()">💾 Save</button>
+      </div>
+      <p class="op-note" id="op-extra-amount-status" style="margin-top:10px;"></p>
     </div>
   </div>
 
@@ -881,6 +938,14 @@
       <div class="op-mc-row"><b>Address:</b> <span id="op-pm-address"></span></div>
       <div class="op-mc-row"><b>UPI ID:</b> <span id="op-pm-gpay"></span></div>
       <div class="op-mc-row"><b>Status:</b> <span id="op-pm-status"></span></div>
+      <div class="op-mc-row"><b>Due amount:</b> <span id="op-pm-due">—</span></div>
+      <div style="margin-top:10px;">
+        <div class="op-search-box" style="margin-bottom:6px;">
+          <input type="number" id="op-pm-settle-input" placeholder="Amount settled (₹)" min="0" step="0.5">
+        </div>
+        <button type="button" class="op-btn op-btn-push" onclick="opSettleDue()">✅ Mark Settled</button>
+        <p class="op-note" id="op-pm-settle-status" style="margin-top:4px;"></p>
+      </div>
       <div style="margin-top:14px;">
         <button type="button" class="op-btn" id="op-pm-toggle-btn" onclick="opTogglePartnerStatus()"></button>
         <button type="button" class="op-btn" onclick="opOpenChatWith(opCurrentPartnerId); document.getElementById('op-partner-modal').classList.remove('show'); opOpenSection('support');">💬 Chat</button>
@@ -1244,6 +1309,7 @@ function logInRestaurant(id, data) {
     listenMenu();
     listenOrdersBadge();
     listenPaymentPending();
+    listenDueAmount();
     listenPartnerSupportMessages();
   }
   updateZoneBadge();
@@ -1252,6 +1318,10 @@ function logInRestaurant(id, data) {
 
 function openStockScreen() {
   showScreen('stock');
+}
+
+function openDueScreen() {
+  showScreen('due');
 }
 
 function openAccountScreen() {
@@ -1720,6 +1790,70 @@ function listenOrdersBadge() {
   });
 }
 
+// ---------- DUE AMOUNT (what this restaurant owes the platform) ----------
+// The customer app stamps every order with `platformDue` — the operator's
+// extra amount at the moment that order was placed, multiplied by item
+// qty. Once an order reaches 'delivered', that amount is owed. Settlements
+// recorded by the operator (restaurants/{id}/settlements) subtract from
+// this. Both sides of this — gross due and settlements — are summed fresh
+// from Firebase every time either changes, so there's nothing to keep in
+// sync by hand and no risk of double-counting.
+let dueGrossTotal = 0;
+let dueOrderCount = 0;
+let dueSettlements = [];
+
+function renderDueUI() {
+  const settledTotal = dueSettlements.reduce((s, x) => s + (Number(x.amount) || 0), 0);
+  const netDue = Math.max(0, dueGrossTotal - settledTotal);
+
+  const badge = document.getElementById('due-status-badge');
+  if (badge) badge.textContent = '₹' + netDue;
+
+  const totalEl = document.getElementById('due-total-amount');
+  if (totalEl) totalEl.textContent = '₹' + netDue;
+  const countEl = document.getElementById('due-order-count');
+  if (countEl) countEl.textContent = 'From ' + dueOrderCount + ' delivered order' + (dueOrderCount === 1 ? '' : 's');
+
+  const listEl = document.getElementById('due-settlements-list');
+  if (listEl) {
+    if (!dueSettlements.length) {
+      listEl.innerHTML = '<p class="hint-text">No settlements recorded yet.</p>';
+    } else {
+      const sorted = [...dueSettlements].sort((a, b) => (b.settledAt || 0) - (a.settledAt || 0));
+      listEl.innerHTML = sorted.map(s => `
+        <div class="pay-pending-row" style="background:var(--field-bg); border:1px solid var(--field-border); border-radius:8px; padding:10px 12px;">
+          <span>${s.note ? s.note : 'Settled by operator'}</span>
+          <span>₹${s.amount || 0}</span>
+        </div>
+      `).join('');
+    }
+  }
+}
+
+function listenDueAmount() {
+  const { db, ref, onValue } = window.fb;
+  onValue(ref(db, 'restaurants/' + state.restId + '/orders'), snap => {
+    let gross = 0, count = 0;
+    snap.forEach(child => {
+      const o = child.val();
+      const status = (o.status || '').toLowerCase();
+      if (['delivered', 'completed', 'done'].includes(status) && o.platformDue) {
+        gross += Number(o.platformDue) || 0;
+        count++;
+      }
+    });
+    dueGrossTotal = gross;
+    dueOrderCount = count;
+    renderDueUI();
+  });
+  onValue(ref(db, 'restaurants/' + state.restId + '/settlements'), snap => {
+    const list = [];
+    snap.forEach(child => list.push(Object.assign({ _id: child.key }, child.val())));
+    dueSettlements = list;
+    renderDueUI();
+  });
+}
+
 // ---------- PAYMENT PENDING (GPay orders awaiting restaurant's confirmation) ----------
 // GPay orders land here first (status: 'awaiting_payment') instead of the
 // normal accept/reject popup, so nothing gets cooked before the restaurant
@@ -2096,6 +2230,37 @@ function opOpenSection(name) {
   if (name === 'push') opUpdateAppCodeSizeLabel();
   if (name === 'partners') opRenderPartnersList();
   if (name === 'support') opRenderChatConvList();
+  if (name === 'pricing') opLoadExtraAmount();
+}
+
+/* ---- Extra Amount (Paisa) added to every item price for customers ---- */
+function opLoadExtraAmount() {
+  const status = document.getElementById('op-extra-amount-status');
+  status.textContent = 'Loading current amount...';
+  const { db, ref, get } = window.fb;
+  get(ref(db, 'app_config/extraAmount')).then(snap => {
+    const data = snap.val();
+    const amount = (data && Number(data.amount)) || 0;
+    document.getElementById('op-extra-amount-input').value = amount;
+    status.textContent = data && data.updatedAt ? ('Last updated ' + data.updatedAt + '.') : 'Not set yet — currently ₹0 extra.';
+  }).catch(err => { status.textContent = 'Error: ' + err.message; });
+}
+function opSaveExtraAmount() {
+  const input = document.getElementById('op-extra-amount-input');
+  const status = document.getElementById('op-extra-amount-status');
+  const amount = Number(input.value);
+  if (isNaN(amount) || amount < 0) {
+    status.textContent = 'Enter a valid amount (0 or more).';
+    return;
+  }
+  status.textContent = 'Saving...';
+  const { db, ref, set } = window.fb;
+  set(ref(db, 'app_config/extraAmount'), {
+    amount,
+    updatedAt: new Date().toLocaleString()
+  }).then(() => {
+    status.textContent = 'Saved! Customers now see item prices + ₹' + amount + '.';
+  }).catch(err => { status.textContent = 'Error: ' + err.message; });
 }
 
 /* ---- Push App Update ---- */
@@ -2173,6 +2338,25 @@ function opListenPartners() {
   });
 }
 function opTypeLabel(t) { return t === 'groceries' ? 'Groceries' : t === 'online_shop' ? 'Online Shop' : 'Hotel'; }
+// Gross due = sum of platformDue on this partner's delivered orders (the
+// operator's extra amount stamped onto each order when it was placed),
+// minus everything already recorded as settled against this partner.
+function opComputeDue(p) {
+  let gross = 0;
+  if (p.orders) {
+    Object.values(p.orders).forEach(o => {
+      const status = (o.status || '').toLowerCase();
+      if (['delivered', 'completed', 'done'].includes(status) && o.platformDue) {
+        gross += Number(o.platformDue) || 0;
+      }
+    });
+  }
+  let settled = 0;
+  if (p.settlements) {
+    Object.values(p.settlements).forEach(s => { settled += Number(s.amount) || 0; });
+  }
+  return Math.max(0, gross - settled);
+}
 function opRenderPartnersList() {
   const wrap = document.getElementById('op-partners-list');
   if (!wrap) return;
@@ -2185,7 +2369,7 @@ function opRenderPartnersList() {
         <span class="op-partner-name">${escapeHtml(p.restaurantName || p._id)}</span>
         <span class="op-partner-type">${opTypeLabel(p.businessType)}</span>
       </div>
-      <div class="op-partner-sub">${escapeHtml(p.address || '')} ${p.status === 'suspended' ? ' · ⛔ SUSPENDED' : ''}</div>
+      <div class="op-partner-sub">${escapeHtml(p.address || '')} ${p.status === 'suspended' ? ' · ⛔ SUSPENDED' : ''} · Due ₹${opComputeDue(p)}</div>
     </div>
   `).join('');
 }
@@ -2198,11 +2382,41 @@ function opShowPartnerDetail(id) {
   document.getElementById('op-pm-type').textContent = opTypeLabel(p.businessType);
   document.getElementById('op-pm-address').textContent = p.address || '—';
   document.getElementById('op-pm-gpay').textContent = p.gpayNumber || '—';
+  document.getElementById('op-pm-due').textContent = '₹' + opComputeDue(p);
+  document.getElementById('op-pm-settle-input').value = '';
+  document.getElementById('op-pm-settle-status').textContent = '';
   const suspended = p.status === 'suspended';
   document.getElementById('op-pm-status').textContent = suspended ? 'Suspended' : 'Active';
   const toggleBtn = document.getElementById('op-pm-toggle-btn');
   toggleBtn.textContent = suspended ? '✅ Reactivate Account' : '⛔ Suspend Account';
   document.getElementById('op-partner-modal').classList.add('show');
+}
+function opSettleDue() {
+  const p = opAllPartners.find(x => x._id === opCurrentPartnerId);
+  const input = document.getElementById('op-pm-settle-input');
+  const status = document.getElementById('op-pm-settle-status');
+  if (!p) return;
+  const amount = Number(input.value);
+  const currentDue = opComputeDue(p);
+  if (isNaN(amount) || amount <= 0) {
+    status.textContent = 'Enter a valid amount to settle.';
+    return;
+  }
+  if (amount > currentDue) {
+    if (!confirm('Entered amount (₹' + amount + ') is more than the current due (₹' + currentDue + '). Settle anyway?')) return;
+  }
+  status.textContent = 'Saving...';
+  const { db, ref, push, set } = window.fb;
+  const settleRef = push(ref(db, 'restaurants/' + opCurrentPartnerId + '/settlements'));
+  set(settleRef, {
+    amount,
+    settledAt: Date.now(),
+    note: 'Settled by operator on ' + new Date().toLocaleString()
+  }).then(() => {
+    status.textContent = 'Settled ₹' + amount + '. Remaining due: ₹' + Math.max(0, currentDue - amount) + '.';
+    document.getElementById('op-pm-due').textContent = '₹' + Math.max(0, currentDue - amount);
+    input.value = '';
+  }).catch(err => { status.textContent = 'Error: ' + err.message; });
 }
 function opTogglePartnerStatus() {
   const p = opAllPartners.find(x => x._id === opCurrentPartnerId);
