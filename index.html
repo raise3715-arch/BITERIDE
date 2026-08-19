@@ -30,6 +30,22 @@
     display:flex; justify-content:center; min-height:100vh;
   }
   #app{ width:100%; max-width:420px; min-height:100vh; background:var(--ink); position:relative; }
+
+  /* Laptop / desktop: keep the same mobile layout untouched, just present it
+     as a floating "phone card" instead of a full-bleed page so it doesn't
+     look stretched on a wide screen. Nothing below 641px is affected. */
+  @media (min-width:641px){
+    body{
+      background:linear-gradient(160deg,#081b32,#0B2545 55%,#0d2c4d);
+      align-items:flex-start;
+      padding:32px 16px;
+    }
+    #app{
+      min-height:calc(100vh - 64px);
+      border-radius:28px;
+      box-shadow:0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.06);
+    }
+  }
   .screen{ display:none; padding-bottom:24px; }
   .screen.active{ display:block; }
 
