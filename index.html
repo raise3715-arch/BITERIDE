@@ -285,9 +285,40 @@
   .zone-search-empty, .zone-search-loading{
     padding:12px 14px; font-size:12px; color:var(--muted-2); font-family:'Inter',sans-serif;
   }
+
+  /* Audio-unlock gate: mobile browsers block order-alert sound until a real
+     tap happens on THIS page. Auto-login (from a cached session) never
+     produces that tap on its own, so this screen forces one, every time
+     the app is freshly opened, before anything else is usable. */
+  #audio-gate{
+    position:fixed; inset:0; z-index:5000; background:var(--ink);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:18px; padding:24px; text-align:center;
+  }
+  #audio-gate.hide{ display:none; }
+  #audio-gate .bell{
+    width:72px; height:72px; border-radius:50%; background:var(--marigold);
+    display:flex; align-items:center; justify-content:center; animation:ringPulse 1s infinite;
+  }
+  #audio-gate h2{ color:var(--cloud); font-family:'Fraunces',serif; font-size:20px; margin:0; }
+  #audio-gate p{ color:var(--muted); font-size:13px; margin:0; max-width:280px; }
+  #audio-gate-btn{
+    padding:14px 28px; border:none; border-radius:10px; background:var(--marigold);
+    color:var(--ink); font-weight:700; font-size:15px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
 </style>
 </head>
 <body>
+
+<div id="audio-gate">
+  <div class="bell">
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+  </div>
+  <h2>Enable order alerts</h2>
+  <p>Tap below once so your phone can play sound and vibration the moment a new order comes in — this is a one-time browser requirement.</p>
+  <button id="audio-gate-btn">Enable sound &amp; vibration</button>
+</div>
+
 <div id="app">
 
   <div class="toast" id="toast"></div>
@@ -657,20 +688,24 @@ const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
 alarmAudio.loop = true;
 
 // ---------- Audio unlock ----------
-// Mobile browsers block audio.play() unless it happens right after a user
-// tap. If the app is freshly opened and a new order lands before the
-// person has tapped anything on THIS screen, the ring can silently fail.
-// We "prime" the audio element on the very first tap anywhere in the app
-// (any screen) so every later startRinging() call — triggered by Firebase,
-// not by a tap — is allowed to play with sound.
+// Mobile browsers block audio.play() unless it happens right after a real
+// user tap on the current page load. Auto-login from a cached session skips
+// the login-button tap entirely, so without this gate, sound can silently
+// fail the moment the app is opened and an order lands before any tap.
 let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
-  audioUnlocked = true;
-  alarmAudio.play().then(() => { alarmAudio.pause(); alarmAudio.currentTime = 0; }).catch(() => {
-    audioUnlocked = false; // retry on the next tap if it didn't actually unlock
+  alarmAudio.play().then(() => {
+    audioUnlocked = true;
+    alarmAudio.pause();
+    alarmAudio.currentTime = 0;
+    document.getElementById('audio-gate').classList.add('hide');
+  }).catch(() => {
+    // Still locked — leave the gate up so the next tap on it retries.
   });
 }
+document.getElementById('audio-gate-btn').addEventListener('click', unlockAudio);
+document.getElementById('audio-gate').addEventListener('click', unlockAudio);
 document.addEventListener('click', unlockAudio, { capture: true });
 document.addEventListener('touchstart', unlockAudio, { capture: true });
 
@@ -814,7 +849,7 @@ function init() {
     localStorage.removeItem('asfood_partner_id');
     localStorage.removeItem('asfood_partner_data');
     localStorage.removeItem('asfood_last_screen');
-    state = { restId: null, restaurant: null, editingItemId: null, photoDataUrl: "" };
+    state = { restId: null, restaurant: null, editingItemId: null, photoDataUrl: "", listenersAttached: false };
     showScreen('login');
   });
 
@@ -907,9 +942,17 @@ function logInRestaurant(id, data) {
     if (saved && RESTORABLE_SCREENS.includes(saved)) restoreScreen = saved;
   } catch (e) {}
   showScreen(restoreScreen);
-  listenMenu();
-  listenOrdersBadge();
-  listenPaymentPending();
+  // logInRestaurant runs twice on a fresh load (once with the cached
+  // session, once again with fresh data from Firebase) so it can restore
+  // the UI instantly without waiting on the network. These listeners only
+  // need to be attached the first time — re-attaching on the second call
+  // would stack duplicate onValue subscriptions on the same paths.
+  if (!state.listenersAttached) {
+    state.listenersAttached = true;
+    listenMenu();
+    listenOrdersBadge();
+    listenPaymentPending();
+  }
   updateZoneBadge();
 }
 
@@ -1091,23 +1134,29 @@ function renderMenu(items) {
     return;
   }
   items.forEach(it => {
-    const card = document.createElement('div');
-    card.className = "chit";
-    card.innerHTML = `
-      <div class="menu-row">
-        ${it.photo ? `<img class="menu-photo" src="${it.photo}" />` : `<div class="menu-photo"></div>`}
-        <div class="menu-info">
-          <p class="menu-name">${it.name}</p>
-          <p class="menu-desc">${it.desc || ""}</p>
-          <p class="menu-price">₹${it.price}</p>
+    // A single malformed item (bad photo data, missing field, etc.) must
+    // never stop the rest of the menu from rendering — try/catch per item.
+    try {
+      const card = document.createElement('div');
+      card.className = "chit";
+      card.innerHTML = `
+        <div class="menu-row">
+          ${it.photo ? `<img class="menu-photo" src="${it.photo}" />` : `<div class="menu-photo"></div>`}
+          <div class="menu-info">
+            <p class="menu-name">${it.name}</p>
+            <p class="menu-desc">${it.desc || ""}</p>
+            <p class="menu-price">₹${it.price}</p>
+          </div>
+          <button class="menu-edit-btn" data-id="${it.id}">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6B8A" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+          </button>
         </div>
-        <button class="menu-edit-btn" data-id="${it.id}">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#4A6B8A" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-        </button>
-      </div>
-    `;
-    card.querySelector('.menu-edit-btn').addEventListener('click', () => openItemForm(it));
-    listEl.appendChild(card);
+      `;
+      card.querySelector('.menu-edit-btn').addEventListener('click', () => openItemForm(it));
+      listEl.appendChild(card);
+    } catch (e) {
+      console.error('Skipped one broken menu item while rendering:', it && it.id, e);
+    }
   });
 }
 

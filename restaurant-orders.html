@@ -210,7 +210,6 @@
 let restId = localStorage.getItem('asfood_partner_id');
 let orders = [];
 let selectedOrderId = null;
-let pendingOpenId = new URLSearchParams(window.location.search).get('order');
 
 if (!restId) {
   window.location.href = 'index.html';
@@ -230,39 +229,29 @@ function showToast(msg) {
   window._toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
-alarmAudio.loop = true;
-
-// ---------- Audio unlock ----------
-// Same audio-unlock trick as index.html — primes playback on the first tap
-// on this page so a later, tap-less startRinging() call (from the Firebase
-// listener) is allowed to actually produce sound.
-let audioUnlocked = false;
-function unlockAudio() {
-  if (audioUnlocked) return;
-  audioUnlocked = true;
-  alarmAudio.play().then(() => { alarmAudio.pause(); alarmAudio.currentTime = 0; }).catch(() => {
-    audioUnlocked = false;
-  });
+function beep() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = 'sine'; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    o.start();
+    o.frequency.setValueAtTime(660, ctx.currentTime + 0.15);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+    o.stop(ctx.currentTime + 0.4);
+  } catch (e) {}
 }
-document.addEventListener('click', unlockAudio, { capture: true });
-document.addEventListener('touchstart', unlockAudio, { capture: true });
 
-let vibrateInterval = null;
+let ringInterval = null;
 function startRinging() {
   stopRinging();
-  alarmAudio.currentTime = 0;
-  alarmAudio.play().catch(() => {});
-  if (navigator.vibrate) {
-    navigator.vibrate([500, 300, 500, 300, 500]);
-    vibrateInterval = setInterval(() => navigator.vibrate([500, 300, 500, 300, 500]), 2000);
-  }
+  beep();
+  ringInterval = setInterval(beep, 1200);
 }
 function stopRinging() {
-  alarmAudio.pause();
-  alarmAudio.currentTime = 0;
-  if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
-  if (navigator.vibrate) navigator.vibrate(0);
+  if (ringInterval) { clearInterval(ringInterval); ringInterval = null; }
 }
 
 // Renders every currently-pending order together in one popup, each with
@@ -380,12 +369,6 @@ window.addEventListener('fb-ready', () => {
     list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     orders = list;
     renderList();
-
-    if (pendingOpenId) {
-      const target = pendingOpenId;
-      pendingOpenId = null;
-      if (list.some(o => o.id === target)) openDetail(target);
-    }
 
     // Always reflects the full set of currently-pending orders, so all of
     // them show together in one popup instead of queuing one after another.
