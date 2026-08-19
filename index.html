@@ -973,6 +973,10 @@
   const fbApp = initializeApp(firebaseConfig);
   const db = getDatabase(fbApp);
   window.fb = { db, ref, onValue, push, set, get, update, remove };
+
+  // ---- Cloudinary photo upload (free, no card, no backend needed) ----
+  window.CLOUDINARY_CLOUD_NAME = "gsbs6xkx";
+  window.CLOUDINARY_UPLOAD_PRESET = "llwpguwm";
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 
@@ -1377,6 +1381,32 @@ document.getElementById('rest-id-copy-btn').addEventListener('click', () => {
   });
 });
 
+// ---------- R2 PHOTO UPLOAD HELPER ----------
+// Resizes/compresses an <img> onto a canvas, uploads the resulting JPEG to
+// Cloudflare R2 via the Worker, and returns the public URL (or throws).
+function canvasToBlob(canvas, quality) {
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
+}
+async function resizeImageToBlob(imgEl, maxDim, quality) {
+  let w = imgEl.width, h = imgEl.height;
+  if (w > h && w > maxDim) { h = h * (maxDim / w); w = maxDim; }
+  else if (h > maxDim) { w = w * (maxDim / h); h = maxDim; }
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  canvas.getContext('2d').drawImage(imgEl, 0, 0, w, h);
+  return canvasToBlob(canvas, quality);
+}
+async function uploadPhotoToCloudinary(blob) {
+  const formData = new FormData();
+  formData.append('file', blob);
+  formData.append('upload_preset', window.CLOUDINARY_UPLOAD_PRESET);
+  const url = `https://api.cloudinary.com/v1_1/${window.CLOUDINARY_CLOUD_NAME}/image/upload`;
+  const res = await fetch(url, { method: 'POST', body: formData });
+  if (!res.ok) throw new Error('Upload failed: ' + res.status);
+  const data = await res.json();
+  return data.secure_url;
+}
+
 // ---------- RESTAURANT PHOTO ----------
 function renderRestPhoto(photoUrl) {
   const preview = document.getElementById('rest-photo-preview');
@@ -1400,23 +1430,19 @@ function handleRestPhotoSelect(e) {
   reader.onload = (ev) => {
     const img = new Image();
     img.onload = async () => {
-      // Resize down to keep the Firebase record small
-      const maxDim = 800;
-      let w = img.width, h = img.height;
-      if (w > h && w > maxDim) { h = h * (maxDim / w); w = maxDim; }
-      else if (h > maxDim) { w = w * (maxDim / h); h = maxDim; }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      renderRestPhoto(dataUrl);
+      // Show an instant local preview while the real upload happens in the background
+      renderRestPhoto(ev.target.result);
+      showToast("Uploading photo...");
       try {
+        const blob = await resizeImageToBlob(img, 800, 0.7);
+        const url = await uploadPhotoToCloudinary(blob);
         const { db, ref, update } = window.fb;
-        await update(ref(db, 'restaurants/' + state.restId), { photo: dataUrl });
-        state.restaurant.photo = dataUrl;
+        await update(ref(db, 'restaurants/' + state.restId), { photo: url });
+        state.restaurant.photo = url;
+        renderRestPhoto(url);
         showToast("Restaurant photo updated");
       } catch (err) {
-        showToast("Couldn't save photo — check your connection and try again.");
+        showToast("Couldn't upload photo — check your connection and try again.");
         renderRestPhoto(state.restaurant.photo || "");
       }
     };
@@ -1649,20 +1675,24 @@ function handlePhotoSelect(e) {
   const reader = new FileReader();
   reader.onload = (ev) => {
     const img = new Image();
-    img.onload = () => {
-      // Resize down to keep the Firebase record small
-      const maxDim = 600;
-      let w = img.width, h = img.height;
-      if (w > h && w > maxDim) { h = h * (maxDim / w); w = maxDim; }
-      else if (h > maxDim) { w = w * (maxDim / h); h = maxDim; }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
-      state.photoDataUrl = dataUrl;
+    img.onload = async () => {
+      // Instant local preview
       const preview = document.getElementById('photo-preview');
-      preview.src = dataUrl; preview.style.display = "block";
+      preview.src = ev.target.result; preview.style.display = "block";
       document.getElementById('photo-upload-placeholder').style.display = "none";
+      state.photoUploading = true;
+      showToast("Uploading photo...");
+      try {
+        const blob = await resizeImageToBlob(img, 600, 0.7);
+        const url = await uploadPhotoToCloudinary(blob);
+        state.photoDataUrl = url;
+        preview.src = url;
+      } catch (err) {
+        showToast("Couldn't upload photo — check your connection and try again.");
+        state.photoDataUrl = "";
+      } finally {
+        state.photoUploading = false;
+      }
     };
     img.src = ev.target.result;
   };
@@ -1677,6 +1707,11 @@ async function saveItem() {
   errEl.style.display = "none";
   if (!name || isNaN(price) || price < 0) {
     errEl.textContent = "Enter a valid item name and price";
+    errEl.style.display = "block";
+    return;
+  }
+  if (state.photoUploading) {
+    errEl.textContent = "Photo is still uploading — wait a moment and try again";
     errEl.style.display = "block";
     return;
   }
