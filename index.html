@@ -1134,11 +1134,17 @@ async function doRegister() {
 }
 
 // ---------- MENU ----------
+// Reads via the top-level 'restaurants' node and picks out just this
+// restaurant's menu — the same approach the customer app uses — instead of
+// querying the nested 'restaurants/{id}/menu' sub-path directly, which was
+// only ever returning the single most-recently-added item.
 function listenMenu() {
   const { db, ref, onValue } = window.fb;
-  onValue(ref(db, 'restaurants/' + state.restId + '/menu'), snap => {
-    const items = [];
-    snap.forEach(child => items.push({ id: child.key, ...child.val() }));
+  onValue(ref(db, 'restaurants'), snap => {
+    const all = snap.val() || {};
+    const mine = all[state.restId] || {};
+    const menuObj = mine.menu || {};
+    const items = Object.keys(menuObj).map(k => ({ id: k, ...menuObj[k] }));
     console.log('[stock-debug] restId=', state.restId, 'items received=', items.length, items);
     const dbg = document.getElementById('menu-debug');
     if (dbg) dbg.textContent = 'Debug: restId=' + state.restId + ' | server sent ' + items.length + ' item(s): ' + items.map(i => i.name).join(', ');
