@@ -318,6 +318,16 @@
   <p>Tap below once so your phone can play sound and vibration the moment a new order comes in — this is a one-time browser requirement.</p>
   <button id="audio-gate-btn">Enable sound &amp; vibration</button>
 </div>
+<script>
+  // Already granted once before on this device — skip the gate entirely so
+  // it never asks again. (Kept as inline/synchronous so it applies before
+  // the gate ever gets a chance to paint on screen.)
+  try {
+    if (localStorage.getItem('asfood_audio_enabled') === '1') {
+      document.getElementById('audio-gate').classList.add('hide');
+    }
+  } catch (e) {}
+</script>
 
 <div id="app">
 
@@ -460,6 +470,7 @@
         Add item
       </button>
     </div>
+    <p id="menu-debug" style="padding:0 24px; font-size:11px; color:#E8A33D; font-family:monospace;"></p>
     <div class="menu-list" id="menu-list"></div>
   </section>
 
@@ -688,10 +699,13 @@ const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
 alarmAudio.loop = true;
 
 // ---------- Audio unlock ----------
-// Mobile browsers block audio.play() unless it happens right after a real
-// user tap on the current page load. Auto-login from a cached session skips
-// the login-button tap entirely, so without this gate, sound can silently
-// fail the moment the app is opened and an order lands before any tap.
+// Mobile browsers block unmuted audio.play() unless it happens right after
+// a real user tap — this is a fixed browser rule, not something a website
+// can turn off. What we CAN do: probe silently the moment the app loads.
+// Once this origin has been used (and tapped) enough times before, browsers
+// grant autoplay without needing a fresh tap — in that case the probe below
+// succeeds on its own and the gate below never even appears. The visible
+// gate is only a fallback for when the probe is still blocked.
 let audioUnlocked = false;
 function unlockAudio() {
   if (audioUnlocked) return;
@@ -700,6 +714,7 @@ function unlockAudio() {
     alarmAudio.pause();
     alarmAudio.currentTime = 0;
     document.getElementById('audio-gate').classList.add('hide');
+    try { localStorage.setItem('asfood_audio_enabled', '1'); } catch (e) {}
   }).catch(() => {
     // Still locked — leave the gate up so the next tap on it retries.
   });
@@ -708,6 +723,11 @@ document.getElementById('audio-gate-btn').addEventListener('click', unlockAudio)
 document.getElementById('audio-gate').addEventListener('click', unlockAudio);
 document.addEventListener('click', unlockAudio, { capture: true });
 document.addEventListener('touchstart', unlockAudio, { capture: true });
+// Silent, gesture-less probe on every load — near-zero volume so a
+// successful probe is inaudible, restored right after.
+alarmAudio.volume = 0.01;
+unlockAudio();
+setTimeout(() => { alarmAudio.volume = 1; }, 300);
 
 let vibrateInterval = null;
 function startRinging() {
@@ -1119,7 +1139,14 @@ function listenMenu() {
   onValue(ref(db, 'restaurants/' + state.restId + '/menu'), snap => {
     const items = [];
     snap.forEach(child => items.push({ id: child.key, ...child.val() }));
+    console.log('[stock-debug] restId=', state.restId, 'items received=', items.length, items);
+    const dbg = document.getElementById('menu-debug');
+    if (dbg) dbg.textContent = 'Debug: restId=' + state.restId + ' | server sent ' + items.length + ' item(s): ' + items.map(i => i.name).join(', ');
     renderMenu(items);
+  }, (err) => {
+    console.error('[stock-debug] onValue error:', err);
+    const dbg = document.getElementById('menu-debug');
+    if (dbg) dbg.textContent = 'Debug: Firebase read error — ' + err.message;
   });
 }
 
