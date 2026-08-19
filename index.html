@@ -1090,11 +1090,13 @@ function renderOrderPopup(pendingList) {
     const itemsHtml = (order.items || []).map(it =>
       `<div class="order-popup-row"><span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span></div>`
     ).join('');
+    const feeHtml = order.platformFee ? `<div class="order-popup-row"><span>Platform fee</span><span>₹${order.platformFee}</span></div>` : '';
 
     card.innerHTML = `
       <h2 class="order-popup-title">${order.orderNumber || 'New order'}</h2>
       <div class="order-popup-body">
         ${itemsHtml}
+        ${feeHtml}
         <div class="order-popup-row order-popup-row-total"><span>Total</span><span>₹${order.total || 0}</span></div>
         <div class="order-popup-row"><span>Payment</span><span>${order.paymentMethod || 'Cash on Delivery'}</span></div>
       </div>
@@ -1792,12 +1794,15 @@ function listenOrdersBadge() {
 
 // ---------- DUE AMOUNT (what this restaurant owes the platform) ----------
 // The customer app stamps every order with `platformDue` — the operator's
-// extra amount at the moment that order was placed, multiplied by item
-// qty. Once an order reaches 'delivered', that amount is owed. Settlements
-// recorded by the operator (restaurants/{id}/settlements) subtract from
-// this. Both sides of this — gross due and settlements — are summed fresh
-// from Firebase every time either changes, so there's nothing to keep in
-// sync by hand and no risk of double-counting.
+// flat platform fee for that order, captured at the moment it was placed.
+// Once an order reaches "ready" (or any status beyond it — out for
+// delivery / delivered / completed), that fee is owed; it no longer waits
+// for full delivery. Settlements recorded by the operator
+// (restaurants/{id}/settlements) subtract from this. Both sides of this —
+// gross due and settlements — are summed fresh from Firebase every time
+// either changes, so there's nothing to keep in sync by hand and no risk
+// of double-counting.
+const DUE_QUALIFYING_STATUSES = ['ready', 'out_for_delivery', 'out-for-delivery', 'dispatched', 'on_the_way', 'on-the-way', 'delivered', 'completed', 'done'];
 let dueGrossTotal = 0;
 let dueOrderCount = 0;
 let dueSettlements = [];
@@ -1837,7 +1842,9 @@ function listenDueAmount() {
     snap.forEach(child => {
       const o = child.val();
       const status = (o.status || '').toLowerCase();
-      if (['delivered', 'completed', 'done'].includes(status) && o.platformDue) {
+      // Due starts accruing the moment the restaurant marks an order
+      // "ready" — no need to wait for full delivery/completion.
+      if (DUE_QUALIFYING_STATUSES.includes(status) && o.platformDue) {
         gross += Number(o.platformDue) || 0;
         count++;
       }
@@ -1889,11 +1896,13 @@ function listenPaymentPending() {
       const itemsHtml = (order.items || []).map(it =>
         `<div class="pay-pending-row"><span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span></div>`
       ).join('');
+      const feeHtml = order.platformFee ? `<div class="pay-pending-row"><span>Platform fee</span><span>₹${order.platformFee}</span></div>` : '';
       const card = document.createElement('div');
       card.className = "pay-pending-card";
       card.innerHTML = `
         <div class="pay-pending-row" style="font-weight:700; margin-bottom:6px;"><span>${order.orderNumber || 'Order'}</span><span>Check your GPay for ₹${order.total || 0}</span></div>
         ${itemsHtml}
+        ${feeHtml}
         <div class="pay-pending-row pay-pending-row-total"><span>Total</span><span>₹${order.total || 0}</span></div>
         <p class="pay-pending-cust">${(order.customerName || 'Guest')} · ${(order.customerPhone || '')}</p>
         <div class="pay-pending-btns">
@@ -2338,15 +2347,16 @@ function opListenPartners() {
   });
 }
 function opTypeLabel(t) { return t === 'groceries' ? 'Groceries' : t === 'online_shop' ? 'Online Shop' : 'Hotel'; }
-// Gross due = sum of platformDue on this partner's delivered orders (the
-// operator's extra amount stamped onto each order when it was placed),
-// minus everything already recorded as settled against this partner.
+// Gross due = sum of platformDue on this partner's orders that have reached
+// "ready" or beyond (the operator's flat platform fee stamped onto each
+// order when it was placed), minus everything already recorded as settled
+// against this partner.
 function opComputeDue(p) {
   let gross = 0;
   if (p.orders) {
     Object.values(p.orders).forEach(o => {
       const status = (o.status || '').toLowerCase();
-      if (['delivered', 'completed', 'done'].includes(status) && o.platformDue) {
+      if (DUE_QUALIFYING_STATUSES.includes(status) && o.platformDue) {
         gross += Number(o.platformDue) || 0;
       }
     });
