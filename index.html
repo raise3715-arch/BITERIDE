@@ -190,6 +190,43 @@
   .pill-ready{ background:#BFE3F0; color:#1C5A70; }
   .pill-delivered{ background:#D6D0C4; color:#4A463D; }
   .pill-cancelled{ background:#EFC3BA; color:#7A2A1D; }
+
+  .order-select-toggle{
+    background:none; border:1.5px solid var(--muted); color:var(--muted);
+    font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
+    padding:6px 12px; border-radius:20px; cursor:pointer;
+  }
+  .order-select-toggle.active{ background:var(--marigold); border-color:var(--marigold); color:var(--ink); }
+
+  .route-bar{
+    margin:12px 24px 0; padding:10px 14px; background:var(--field-bg); border:1px solid var(--field-border);
+    border-radius:10px; display:flex; align-items:center; justify-content:space-between;
+  }
+  .route-bar span{ color:var(--cloud); font-size:13px; font-weight:600; }
+
+  .route-panel{ margin:12px 24px 0; background:var(--cloud); border-radius:10px; padding:12px 14px; }
+  .route-panel-title{ color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:1px; margin:0 0 8px; opacity:.6; }
+  .route-stop{ display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid #EEE; }
+  .route-stop:last-child{ border-bottom:none; }
+  .route-stop-num{
+    width:22px; height:22px; border-radius:50%; background:var(--marigold); color:var(--ink);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700;
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .route-stop-info{ flex:1; min-width:0; }
+  .route-stop-cust{ color:var(--ink); font-size:13px; font-weight:600; margin:0; }
+  .route-stop-addr{ color:#4A6B8A; font-size:11px; margin:2px 0 0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .route-stop-dist{ color:var(--ink); font-family:'IBM Plex Mono',monospace; font-size:12px; font-weight:700; flex-shrink:0; }
+
+  .order-chit{ position:relative; }
+  .order-chit-check{
+    position:absolute; top:10px; right:10px; width:20px; height:20px; border-radius:6px;
+    border:2px solid var(--muted-2); background:var(--cloud); display:none;
+    align-items:center; justify-content:center; font-size:13px; color:var(--cloud);
+  }
+  .order-chit.select-mode .order-chit-check{ display:flex; }
+  .order-chit.select-mode.checked .order-chit-check{ background:var(--marigold); border-color:var(--marigold); color:var(--ink); }
+  .order-chit.select-mode.checked{ outline:2px solid var(--marigold); }
   .menu-row{ display:flex; align-items:center; gap:12px; }
   .menu-photo{ width:56px; height:56px; border-radius:10px; object-fit:cover; background:#DCEBFA; flex-shrink:0; }
   .menu-info{ flex:1; min-width:0; }
@@ -587,8 +624,16 @@
 
     <div class="section-row" id="home-orders-row" style="display:none;">
       <h2 class="section-title">Orders in progress</h2>
-      <span class="nav-badge" id="home-orders-badge" style="background:var(--chili);">0</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="nav-badge" id="home-orders-badge" style="background:var(--chili);">0</span>
+        <button class="order-select-toggle" id="home-select-toggle" onclick="toggleOrderSelectMode()">Select</button>
+      </div>
     </div>
+    <div class="route-bar" id="home-route-bar" style="display:none;">
+      <span id="home-route-count">0 selected</span>
+      <button class="btn-primary" id="home-route-btn" style="width:auto; padding:8px 14px; font-size:13px;" onclick="goToSelectedOrders()">Go</button>
+    </div>
+    <div class="route-panel" id="home-route-panel" style="display:none;"></div>
     <div class="home-orders-list" id="home-orders-list"></div>
 
     <p class="empty-text" id="home-empty-text" style="padding:32px 24px 0;">Use the tabs below to manage orders, stock, and your account.</p>
@@ -1796,12 +1841,16 @@ function renderHomeOrdersInProgress(list) {
   badge.textContent = String(list.length);
   emptyText.style.display = "none";
 
+  state.homeOrdersCache = list; // keep full order objects around for distance sorting
+
   listEl.innerHTML = "";
   list.forEach(o => {
     const itemCount = (o.items || []).reduce((s, it) => s + (it.qty || 0), 0);
     const btn = document.createElement('button');
-    btn.className = "order-chit";
+    btn.className = "order-chit" + (state.orderSelectMode ? " select-mode" : "") + (selectedOrderIds.has(o._id) ? " checked" : "");
+    btn.dataset.id = o._id;
     btn.innerHTML = `
+      <div class="order-chit-check">✓</div>
       <div class="order-top">
         <p class="order-num">${o.orderNumber || o._id}</p>
         <span class="${pillClass(o.status)}">${o.status || 'pending'}</span>
@@ -1812,9 +1861,147 @@ function renderHomeOrdersInProgress(list) {
         <p class="order-total">₹${o.total || 0}</p>
       </div>
     `;
-    btn.addEventListener('click', () => { window.location.href = 'restaurant-orders.html?order=' + encodeURIComponent(o._id); });
+    btn.addEventListener('click', () => {
+      if (state.orderSelectMode) {
+        toggleOrderChecked(o._id, btn);
+      } else {
+        window.location.href = 'restaurant-orders.html?order=' + encodeURIComponent(o._id);
+      }
+    });
     listEl.appendChild(btn);
   });
+}
+
+// ---------- SELECT + SORT-BY-NEAREST (dashboard "orders in progress") ----------
+const selectedOrderIds = new Set();
+
+function toggleOrderSelectMode() {
+  state.orderSelectMode = !state.orderSelectMode;
+  const toggleBtn = document.getElementById('home-select-toggle');
+  toggleBtn.classList.toggle('active', state.orderSelectMode);
+  toggleBtn.textContent = state.orderSelectMode ? "Done" : "Select";
+  if (!state.orderSelectMode) {
+    selectedOrderIds.clear();
+    document.getElementById('home-route-panel').style.display = "none";
+  }
+  document.querySelectorAll('#home-orders-list .order-chit').forEach(el => {
+    el.classList.toggle('select-mode', state.orderSelectMode);
+    el.classList.toggle('checked', selectedOrderIds.has(el.dataset.id));
+  });
+  updateRouteBar();
+}
+
+function toggleOrderChecked(id, el) {
+  if (selectedOrderIds.has(id)) selectedOrderIds.delete(id); else selectedOrderIds.add(id);
+  el.classList.toggle('checked', selectedOrderIds.has(id));
+  updateRouteBar();
+}
+
+function updateRouteBar() {
+  const bar = document.getElementById('home-route-bar');
+  const count = document.getElementById('home-route-count');
+  if (state.orderSelectMode && selectedOrderIds.size > 0) {
+    bar.style.display = "flex";
+    count.textContent = selectedOrderIds.size + " selected";
+  } else {
+    bar.style.display = "none";
+    document.getElementById('home-route-panel').style.display = "none";
+  }
+}
+
+// Haversine distance in km between two lat/lng points.
+function distanceKm(lat1, lng1, lat2, lng2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+// Orders store the customer's coordinates under different possible keys
+// depending on how the customer app saved them — check them all.
+function getOrderCoords(o) {
+  if (o.customerLat != null && o.customerLng != null) return { lat: o.customerLat, lng: o.customerLng };
+  if (o.lat != null && o.lng != null) return { lat: o.lat, lng: o.lng };
+  if (o.location && o.location.lat != null && o.location.lng != null) return { lat: o.location.lat, lng: o.location.lng };
+  if (o.customerLocation && o.customerLocation.lat != null && o.customerLocation.lng != null) return { lat: o.customerLocation.lat, lng: o.customerLocation.lng };
+  if (o.deliveryLocation && o.deliveryLocation.lat != null && o.deliveryLocation.lng != null) return { lat: o.deliveryLocation.lat, lng: o.deliveryLocation.lng };
+  return null;
+}
+
+// A stop for Google Maps needs either "lat,lng" or an address string.
+function stopForMaps(o) {
+  const c = getOrderCoords(o);
+  if (c) return c.lat + ',' + c.lng;
+  if (o.customerAddress) return o.customerAddress;
+  return null;
+}
+
+function goToSelectedOrders() {
+  const btn = document.getElementById('home-route-btn');
+  const panel = document.getElementById('home-route-panel');
+  if (!navigator.geolocation) {
+    alert("Location isn't available on this device.");
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "Locating…";
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      btn.disabled = false;
+      btn.textContent = "Go";
+      const myLat = pos.coords.latitude, myLng = pos.coords.longitude;
+      const selected = (state.homeOrdersCache || []).filter(o => selectedOrderIds.has(o._id));
+
+      const withDist = selected.map(o => {
+        const c = getOrderCoords(o);
+        const dist = c ? distanceKm(myLat, myLng, c.lat, c.lng) : null;
+        return { o, dist };
+      });
+      // Nearest first; orders with no coords (can't measure distance) go last.
+      withDist.sort((a, b) => {
+        if (a.dist == null) return 1;
+        if (b.dist == null) return -1;
+        return a.dist - b.dist;
+      });
+
+      panel.innerHTML = `<p class="route-panel-title">NEAREST FIRST</p>` + withDist.map((item, i) => `
+        <div class="route-stop">
+          <div class="route-stop-num">${i + 1}</div>
+          <div class="route-stop-info">
+            <p class="route-stop-cust">${item.o.customerName || 'Guest'} · ${item.o.orderNumber || item.o._id}</p>
+            <p class="route-stop-addr">${item.o.customerAddress || 'No address saved'}</p>
+          </div>
+          <div class="route-stop-dist">${item.dist != null ? item.dist.toFixed(1) + ' km' : '—'}</div>
+        </div>
+      `).join('');
+      panel.style.display = "block";
+
+      // Build a Google Maps directions link: your live location as origin,
+      // every selected order added as a stop, nearest-first order preserved.
+      const stops = withDist.map(item => stopForMaps(item.o)).filter(Boolean);
+      if (!stops.length) {
+        alert("None of the selected orders have a saved location or address to route to.");
+        return;
+      }
+      const destination = stops[stops.length - 1];
+      const waypoints = stops.slice(0, -1);
+      let url = 'https://www.google.com/maps/dir/?api=1'
+        + '&origin=' + encodeURIComponent(myLat + ',' + myLng)
+        + '&destination=' + encodeURIComponent(destination)
+        + '&travelmode=driving';
+      if (waypoints.length) {
+        url += '&waypoints=' + waypoints.map(encodeURIComponent).join('%7C');
+      }
+      window.open(url, '_blank');
+    },
+    err => {
+      btn.disabled = false;
+      btn.textContent = "Go";
+      alert("Couldn't get your location — check location permission and try again.");
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
 }
 
 function listenOrdersBadge() {
