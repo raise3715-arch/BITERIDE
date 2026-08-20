@@ -1081,6 +1081,16 @@ function showToast(msg) {
 const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
 alarmAudio.loop = true;
 
+// Short, one-shot alert played whenever an order is cancelled or rejected
+// (does not loop like alarmAudio — it just needs to notify once).
+const cancelAlertAudio = new Audio('Order_Cancelled_Alert.m4a');
+function playCancelAlert() {
+  try {
+    cancelAlertAudio.currentTime = 0;
+    cancelAlertAudio.play().catch(() => {});
+  } catch (e) {}
+}
+
 // ---------- Audio unlock ----------
 // Mobile browsers block unmuted audio.play() unless it happens right after
 // a real user tap — this is a fixed browser rule, not something a website
@@ -1189,6 +1199,7 @@ async function handlePopupOrderAction(orderId, action) {
     await update(ref(db, 'restaurants/' + state.restId + '/orders/' + orderId), { status: newStatus });
   } catch (e) {}
   showToast(action === 'accept' ? "Order accepted" : "Order rejected");
+  if (action === 'reject') playCancelAlert();
   // listenOrdersBadge's onValue listener will fire again and re-render the
   // popup without this order — no manual DOM removal needed here.
 }
@@ -2161,6 +2172,7 @@ async function handlePaymentPendingAction(orderId, action) {
   const { db, ref, update } = window.fb;
   const newStatus = action === 'confirm-pay' ? 'pending' : 'cancelled';
   await update(ref(db, 'restaurants/' + state.restId + '/orders/' + orderId), { status: newStatus });
+  if (newStatus === 'cancelled') playCancelAlert();
   // When confirmed, this flips the order to 'pending' — the existing
   // listenOrdersBadge listener picks that up on its own and pops the
   // normal new-order alert with sound, same as a cash order would.
