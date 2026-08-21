@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Your Orders</title>
+<title>Order History</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <style>
@@ -15,8 +15,6 @@
     --cloud:#F7F3EA;
     --muted:#B8B0A2;
     --muted-2:#6E695F;
-    --field-bg:#25231F;
-    --field-border:#3A3733;
   }
   *{box-sizing:border-box;}
   body{ margin:0; background:var(--ink); font-family:'Inter',sans-serif; display:flex; justify-content:center; min-height:100vh; }
@@ -47,11 +45,18 @@
   .pill-ready{ background:#BFE3F0; color:#1C5A70; }
   .pill-delivered{ background:#D6D0C4; color:#4A463D; }
   .pill-cancelled{ background:#EFC3BA; color:#7A2A1D; }
+  .pill-rejected{ background:#EFC3BA; color:#7A2A1D; }
 
   .empty-text{ color:var(--muted-2); font-size:14px; padding:0 24px; }
 
-  /* Detail screen */
-  .detail-header{ padding:32px 24px 0; }
+  .filter-row{ padding:0 24px; display:flex; gap:8px; overflow-x:auto; }
+  .filter-chip{
+    flex-shrink:0; padding:6px 14px; border-radius:20px; border:1.5px solid var(--muted);
+    background:none; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+  .filter-chip.active{ background:var(--marigold); border-color:var(--marigold); color:var(--ink); }
+
+  /* Detail screen — view only, no status-change buttons here anymore */
   .detail-block{ margin:24px 24px 0; background:var(--cloud); border-radius:12px; padding:18px; }
   .detail-label{ color:#5C574C; font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; margin:0 0 4px; text-transform:uppercase; }
   .detail-value{ color:var(--ink); font-size:14px; margin:0 0 14px; }
@@ -60,131 +65,43 @@
     display:inline-flex; align-items:center; gap:6px; color:var(--leaf) !important;
     text-decoration:none; font-weight:700;
   }
-  .detail-phone-link::before{
-    content:"📞"; font-size:13px;
-  }
+  .detail-phone-link::before{ content:"📞"; font-size:13px; }
   .item-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ink); padding:4px 0; }
   .item-row-total{ border-top:1px dashed var(--ink); margin-top:8px; padding-top:8px; font-weight:700; }
-
-  .status-actions{ padding:20px 24px 0; display:flex; flex-direction:column; gap:10px; }
-  .status-btn{
-    width:100%; padding:14px; border:none; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer;
-    font-family:'Inter',sans-serif;
-  }
-  .status-btn.preparing{ background:var(--leaf); color:var(--cloud); }
-  .status-btn.ready{ background:#3A8FB0; color:var(--cloud); }
-  .status-btn.delivered{ background:var(--marigold); color:var(--ink); }
-  .status-btn.cancel{ background:transparent; border:1.5px solid var(--chili); color:var(--chili); }
+  .detail-status-row{ padding:20px 24px 0; }
 
   .detail-map-btn{
     display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px;
     border:1.5px solid var(--leaf); background:transparent; color:var(--leaf);
     font-weight:600; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif;
   }
-
-  .toast{
-    position:fixed; top:16px; left:50%; transform:translateX(-50%); z-index:999;
-    background:var(--leaf); color:var(--cloud); padding:14px 18px; border-radius:10px;
-    font-size:14px; font-weight:600; box-shadow:0 6px 20px rgba(0,0,0,.3); max-width:380px; width:calc(100% - 32px);
-    display:none; text-align:center;
-  }
-  .toast.show{ display:block; }
-
-  /* Swiggy-style new order popup */
-  .order-popup-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2000;
-    display:none; align-items:flex-end; justify-content:center;
-  }
-  .order-popup-overlay.show{ display:flex; }
-  .order-popup{
-    width:100%; max-width:420px; max-height:85vh; background:var(--cloud); border-radius:20px 20px 0 0;
-    padding:24px; animation:popupUp .25s ease-out; display:flex; flex-direction:column;
-  }
-  @keyframes popupUp{ from{ transform:translateY(30px); opacity:0; } to{ transform:translateY(0); opacity:1; } }
-  .order-popup-ring{
-    width:56px; height:56px; border-radius:50%; background:var(--chili); display:flex;
-    align-items:center; justify-content:center; margin:0 auto 12px; animation:ringPulse 1s infinite; flex-shrink:0;
-  }
-  @keyframes ringPulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
-  .order-popup-eyebrow{ color:var(--chili); font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:2px; text-align:center; margin:0 0 4px; font-weight:700; flex-shrink:0; }
-  .order-popup-list{ overflow-y:auto; display:flex; flex-direction:column; gap:14px; }
-  .order-popup-card + .order-popup-card{ border-top:1px dashed var(--muted); padding-top:14px; }
-  .order-popup-title{ color:var(--ink); font-family:'Fraunces',serif; font-size:22px; font-weight:700; text-align:center; margin:4px 0 16px; }
-  .order-popup-body{ background:#fff; border-radius:12px; padding:14px 16px; margin-bottom:8px; }
-  .order-popup-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ink); padding:3px 0; }
-  .order-popup-row-total{ border-top:1px dashed var(--ink); margin-top:6px; padding-top:6px; font-weight:700; }
-  .order-popup-cust{ color:#5C574C; font-size:12px; margin:8px 0 16px; text-align:center; }
-  .order-popup-btns{ display:flex; gap:10px; }
-  .order-popup-btns .btn-primary{ flex:1; padding:14px; border:none; border-radius:10px; background:var(--leaf); color:var(--cloud); font-weight:600; font-size:15px; cursor:pointer; font-family:'Inter',sans-serif; }
-  .order-popup-btns .btn-danger{ flex:1; padding:14px; border-radius:10px; background:transparent; border:1.5px solid var(--chili); color:var(--chili); font-weight:600; font-size:14px; cursor:pointer; font-family:'Inter',sans-serif; }
-
-  /* Audio-unlock gate: forces one real tap on THIS page before any code
-     tries to autoplay the alert sound, matching index.html's gate. */
-  #audio-gate{
-    position:fixed; inset:0; z-index:5000; background:var(--ink);
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    gap:18px; padding:24px; text-align:center;
-  }
-  #audio-gate.hide{ display:none; }
-  #audio-gate .bell{
-    width:72px; height:72px; border-radius:50%; background:var(--marigold);
-    display:flex; align-items:center; justify-content:center; animation:ringPulse 1s infinite;
-  }
-  #audio-gate h2{ color:var(--cloud); font-family:'Fraunces',serif; font-size:20px; margin:0; }
-  #audio-gate p{ color:var(--muted); font-size:13px; margin:0; max-width:280px; }
-  #audio-gate-btn{
-    padding:14px 28px; border:none; border-radius:10px; background:var(--marigold);
-    color:var(--ink); font-weight:700; font-size:15px; cursor:pointer; font-family:'Inter',sans-serif;
-  }
 </style>
 </head>
 <body>
 
-<div id="audio-gate">
-  <div class="bell">
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-  </div>
-  <h2>Enable order alerts</h2>
-  <p>Tap below once so your phone can play sound and vibration the moment a new order comes in — this is a one-time browser requirement.</p>
-  <button id="audio-gate-btn">Enable sound &amp; vibration</button>
-</div>
-<script>
-  try {
-    if (localStorage.getItem('asfood_audio_enabled') === '1') {
-      document.getElementById('audio-gate').classList.add('hide');
-    }
-  } catch (e) {}
-</script>
-
 <div id="app">
 
-  <div class="toast" id="toast"></div>
-
-  <div class="order-popup-overlay" id="order-popup-overlay">
-    <div class="order-popup">
-      <div class="order-popup-ring">
-        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#F7F3EA" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-      </div>
-      <p class="order-popup-eyebrow" id="popup-eyebrow">NEW ORDER</p>
-      <div class="order-popup-list" id="popup-list"></div>
-    </div>
-  </div>
-
-  <!-- ORDER LIST -->
+  <!-- ORDER LIST (history — read only) -->
   <section class="screen active" id="screen-list">
     <div class="top-row">
       <button class="btn-back" onclick="window.location.href='index.html'">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
       </button>
       <div>
-        <p class="eyebrow">ORDERS</p>
+        <p class="eyebrow">HISTORY</p>
         <h1 class="title">Your Orders</h1>
       </div>
+    </div>
+    <div class="filter-row" id="filter-row">
+      <button class="filter-chip active" data-filter="all">All</button>
+      <button class="filter-chip" data-filter="delivered">Delivered</button>
+      <button class="filter-chip" data-filter="cancelled">Cancelled</button>
+      <button class="filter-chip" data-filter="rejected">Rejected</button>
     </div>
     <div class="order-list" id="order-list"></div>
   </section>
 
-  <!-- ORDER DETAIL -->
+  <!-- ORDER DETAIL (view only) -->
   <section class="screen" id="screen-detail">
     <div class="top-row">
       <button class="btn-back" onclick="showScreen('list')">
@@ -194,6 +111,10 @@
         <p class="eyebrow" id="detail-order-num">ORDER</p>
         <h1 class="title" id="detail-status-title">Details</h1>
       </div>
+    </div>
+
+    <div class="detail-status-row">
+      <span class="pill" id="detail-status-pill"></span>
     </div>
 
     <div class="detail-block">
@@ -216,15 +137,13 @@
         <span id="detail-total"></span>
       </div>
     </div>
-
-    <div class="status-actions" id="status-actions"></div>
   </section>
 
 </div>
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCrM5wKwsnGtIc7HSTk_5R1d3dXEcYyd7o",
@@ -238,15 +157,19 @@
 
   const fbApp = initializeApp(firebaseConfig);
   const db = getDatabase(fbApp);
-  window.fb = { db, ref, onValue, update };
+  window.fb = { db, ref, onValue };
   window.dispatchEvent(new Event('fb-ready'));
 </script>
 
 <script>
+// This page is history-only. Accepting, rejecting, and moving an order
+// through preparing → ready → delivered all happen inside index.html now —
+// this page just lists past/current orders and lets you view their details.
 let restId = localStorage.getItem('asfood_partner_id');
 let orders = [];
 let selectedOrderId = null;
 let pendingOpenId = new URLSearchParams(window.location.search).get('order');
+let activeFilter = 'all';
 
 if (!restId) {
   window.location.href = 'index.html';
@@ -256,134 +179,6 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('screen-' + id).classList.add('active');
   window.scrollTo(0, 0);
-}
-
-function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  clearTimeout(window._toastTimer);
-  window._toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
-}
-
-const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
-alarmAudio.loop = true;
-
-// ---------- Audio unlock ----------
-// Same silent-probe-first approach as index.html — try a near-silent
-// gesture-less play() the moment this page loads; if the browser already
-// allows it (from past engagement), the gate never appears at all.
-let audioUnlocked = false;
-function unlockAudio() {
-  if (audioUnlocked) return;
-  alarmAudio.play().then(() => {
-    audioUnlocked = true;
-    alarmAudio.pause();
-    alarmAudio.currentTime = 0;
-    document.getElementById('audio-gate').classList.add('hide');
-    try { localStorage.setItem('asfood_audio_enabled', '1'); } catch (e) {}
-  }).catch(() => {});
-}
-document.getElementById('audio-gate-btn').addEventListener('click', unlockAudio);
-document.getElementById('audio-gate').addEventListener('click', unlockAudio);
-document.addEventListener('click', unlockAudio, { capture: true });
-document.addEventListener('touchstart', unlockAudio, { capture: true });
-alarmAudio.volume = 0.01;
-unlockAudio();
-setTimeout(() => { alarmAudio.volume = 1; }, 300);
-
-let vibrateInterval = null;
-function startRinging() {
-  stopRinging();
-  alarmAudio.currentTime = 0;
-  alarmAudio.play().catch(() => {});
-  if (navigator.vibrate) {
-    navigator.vibrate([500, 300, 500, 300, 500]);
-    vibrateInterval = setInterval(() => navigator.vibrate([500, 300, 500, 300, 500]), 2000);
-  }
-}
-function stopRinging() {
-  alarmAudio.pause();
-  alarmAudio.currentTime = 0;
-  if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
-  if (navigator.vibrate) navigator.vibrate(0);
-}
-
-// Renders every currently-pending order together in one popup, each with
-// its own Accept/Reject buttons. The popup only closes once ALL pending
-// orders have been actioned (an individual card just drops out of the
-// list the moment its order is accepted or rejected).
-function renderOrderPopup(pendingList) {
-  const overlay = document.getElementById('order-popup-overlay');
-  const listEl = document.getElementById('popup-list');
-  const eyebrow = document.getElementById('popup-eyebrow');
-
-  if (!pendingList.length) {
-    overlay.classList.remove('show');
-    stopRinging();
-    listEl.innerHTML = "";
-    return;
-  }
-
-  eyebrow.textContent = pendingList.length > 1 ? `NEW ORDERS (${pendingList.length})` : "NEW ORDER";
-
-  listEl.innerHTML = "";
-  pendingList.forEach(order => {
-    const card = document.createElement('div');
-    card.className = "order-popup-card";
-
-    const itemsHtml = (order.items || []).map(it =>
-      `<div class="order-popup-row"><span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span></div>`
-    ).join('');
-
-    card.innerHTML = `
-      <h2 class="order-popup-title">${order.orderNumber || 'New order'}</h2>
-      <div class="order-popup-body">
-        ${itemsHtml}
-        <div class="order-popup-row order-popup-row-total"><span>Total</span><span>₹${order.total || 0}</span></div>
-      </div>
-      <p class="order-popup-cust" data-cust></p>
-      <div class="order-popup-btns">
-        <button class="btn-danger" data-action="reject" data-id="${order.id}">Reject</button>
-        <button class="btn-primary" data-action="accept" data-id="${order.id}">Accept order</button>
-      </div>
-    `;
-
-    // Build customer line (with clickable phone link) safely via DOM, same as before.
-    const custEl = card.querySelector('[data-cust]');
-    const custBits = [order.customerName || 'Guest', order.customerAddress, order.customerLandmark].filter(Boolean);
-    custEl.append(custBits.join(" · "));
-    if (order.customerPhone) {
-      const sep = document.createTextNode(" · ");
-      const phoneLink = document.createElement('a');
-      phoneLink.href = "tel:" + order.customerPhone;
-      phoneLink.textContent = order.customerPhone;
-      phoneLink.style.color = "var(--leaf)";
-      phoneLink.style.fontWeight = "700";
-      phoneLink.style.textDecoration = "none";
-      custEl.append(sep, phoneLink);
-    }
-
-    listEl.appendChild(card);
-  });
-
-  listEl.querySelectorAll('[data-action]').forEach(btn => {
-    btn.onclick = () => handlePopupOrderAction(btn.dataset.id, btn.dataset.action);
-  });
-
-  overlay.classList.add('show');
-  startRinging();
-}
-
-async function handlePopupOrderAction(orderId, action) {
-  const newStatus = action === 'accept' ? 'preparing' : 'rejected';
-  try {
-    const { db, ref, update } = window.fb;
-    await update(ref(db, 'restaurants/' + restId + '/orders/' + orderId), { status: newStatus });
-  } catch (e) {}
-  showToast(action === 'accept' ? "Order accepted" : "Order rejected");
-  // The onValue listener below will fire again and re-render the popup
-  // without this order — no manual DOM removal needed here.
 }
 
 function timeAgo(ts) {
@@ -431,13 +226,6 @@ window.addEventListener('fb-ready', () => {
       if (list.some(o => o.id === target)) openDetail(target);
     }
 
-    // Always reflects the full set of currently-pending orders, so all of
-    // them show together in one popup instead of queuing one after another.
-    const pendingOrders = list
-      .filter(o => (o.status || 'pending') === 'pending')
-      .sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    renderOrderPopup(pendingOrders);
-
     if (selectedOrderId) {
       const updated = list.find(o => o.id === selectedOrderId);
       if (updated) renderDetail(updated);
@@ -445,17 +233,27 @@ window.addEventListener('fb-ready', () => {
   });
 });
 
+document.getElementById('filter-row').addEventListener('click', e => {
+  const chip = e.target.closest('.filter-chip');
+  if (!chip) return;
+  activeFilter = chip.dataset.filter;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.toggle('active', c === chip));
+  renderList();
+});
+
 function renderList() {
   const el = document.getElementById('order-list');
   el.innerHTML = "";
-  if (orders.length === 0) {
+  const filtered = activeFilter === 'all' ? orders : orders.filter(o => (o.status || 'pending') === activeFilter);
+
+  if (filtered.length === 0) {
     const p = document.createElement('p');
     p.className = "empty-text";
-    p.textContent = "No orders yet. New orders from customers will show up here.";
+    p.textContent = orders.length === 0 ? "No orders yet. New orders from customers will show up here." : "No orders match this filter.";
     el.appendChild(p);
     return;
   }
-  orders.forEach(o => {
+  filtered.forEach(o => {
     const itemCount = (o.items || []).reduce((s, it) => s + (it.qty || 0), 0);
     const btn = document.createElement('button');
     btn.className = "chit";
@@ -484,8 +282,11 @@ function openDetail(id) {
 }
 
 function renderDetail(o) {
+  const status = o.status || 'pending';
   document.getElementById('detail-order-num').textContent = o.orderNumber || o.id;
-  document.getElementById('detail-status-title').textContent = (o.status || 'pending').charAt(0).toUpperCase() + (o.status || 'pending').slice(1);
+  document.getElementById('detail-status-title').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+  document.getElementById('detail-status-pill').className = pillClass(status);
+  document.getElementById('detail-status-pill').textContent = status;
   document.getElementById('detail-cust-name').textContent = o.customerName || 'Guest';
   const phoneLink = document.getElementById('detail-cust-phone');
   if (o.customerPhone) {
@@ -527,33 +328,6 @@ function renderDetail(o) {
     itemsEl.appendChild(row);
   });
   document.getElementById('detail-total').textContent = "₹" + (o.total || 0);
-
-  const actionsEl = document.getElementById('status-actions');
-  actionsEl.innerHTML = "";
-  const status = o.status || 'pending';
-  const buttons = [];
-  if (status === 'pending') buttons.push({ label: 'Accept & start preparing', cls: 'preparing', next: 'preparing' });
-  if (status === 'preparing') buttons.push({ label: 'Mark as ready', cls: 'ready', next: 'ready' });
-  if (status === 'ready') buttons.push({ label: 'Mark as delivered', cls: 'delivered', next: 'delivered' });
-  if (status !== 'delivered' && status !== 'cancelled') buttons.push({ label: 'Cancel order', cls: 'cancel', next: 'cancelled' });
-
-  buttons.forEach(b => {
-    const btn = document.createElement('button');
-    btn.className = "status-btn " + b.cls;
-    btn.textContent = b.label;
-    btn.addEventListener('click', () => updateStatus(o.id, b.next));
-    actionsEl.appendChild(btn);
-  });
-}
-
-async function updateStatus(id, newStatus) {
-  try {
-    const { db, ref, update } = window.fb;
-    await update(ref(db, 'restaurants/' + restId + '/orders/' + id), { status: newStatus });
-    showToast("Order marked as " + newStatus);
-  } catch (e) {
-    alert("Couldn't update order — check your connection and try again.");
-  }
 }
 </script>
 </body>

@@ -191,6 +191,33 @@
   .pill-delivered{ background:#D6D0C4; color:#4A463D; }
   .pill-cancelled{ background:#EFC3BA; color:#7A2A1D; }
 
+  /* Order detail screen (in-app — replaces navigating to a separate page) */
+  .detail-block{ margin:24px 24px 0; background:var(--cloud); border-radius:12px; padding:18px; }
+  .detail-label{ color:#5C574C; font-size:11px; font-family:'IBM Plex Mono',monospace; letter-spacing:1px; margin:0 0 4px; text-transform:uppercase; }
+  .detail-value{ color:var(--ink); font-size:14px; margin:0 0 14px; }
+  .detail-value:last-child{ margin-bottom:0; }
+  .detail-phone-link{
+    display:inline-flex; align-items:center; gap:6px; color:var(--leaf) !important;
+    text-decoration:none; font-weight:700;
+  }
+  .detail-phone-link::before{ content:"📞"; font-size:13px; }
+  .item-row{ display:flex; justify-content:space-between; font-size:13px; color:var(--ink); padding:4px 0; }
+  .item-row-total{ border-top:1px dashed var(--ink); margin-top:8px; padding-top:8px; font-weight:700; }
+  .status-actions{ padding:20px 24px 0; display:flex; flex-direction:column; gap:10px; }
+  .status-btn{
+    width:100%; padding:14px; border:none; border-radius:10px; font-weight:600; font-size:14px; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .status-btn.preparing{ background:var(--leaf); color:var(--cloud); }
+  .status-btn.ready{ background:#3A8FB0; color:var(--cloud); }
+  .status-btn.delivered{ background:var(--marigold); color:var(--ink); }
+  .status-btn.cancel{ background:transparent; border:1.5px solid var(--chili); color:var(--chili); }
+  .detail-map-btn{
+    display:inline-flex; align-items:center; gap:6px; padding:8px 14px; border-radius:8px;
+    border:1.5px solid var(--leaf); background:transparent; color:var(--leaf);
+    font-weight:600; font-size:12px; cursor:pointer; font-family:'Inter',sans-serif;
+  }
+
   .order-select-toggle{
     background:none; border:1.5px solid var(--muted); color:var(--muted);
     font-family:'Inter',sans-serif; font-size:12px; font-weight:600;
@@ -637,6 +664,42 @@
     <div class="home-orders-list" id="home-orders-list"></div>
 
     <p class="empty-text" id="home-empty-text" style="padding:32px 24px 0;">Use the tabs below to manage orders, stock, and your account.</p>
+  </section>
+
+  <!-- ORDER DETAIL (accept → preparing → ready → delivered, all in-app now) -->
+  <section class="screen" id="screen-order-detail">
+    <div class="top-row">
+      <button class="btn-back" onclick="state.selectedOrderId=null; showScreen('home')">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8A33D" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div>
+        <p class="eyebrow" id="od-order-num">ORDER</p>
+        <h1 class="title" id="od-status-title">Details</h1>
+      </div>
+    </div>
+
+    <div class="detail-block">
+      <p class="detail-label">Customer</p>
+      <p class="detail-value" id="od-cust-name"></p>
+      <p class="detail-label">Phone</p>
+      <a class="detail-value detail-phone-link" id="od-cust-phone" href="tel:"></a>
+      <p class="detail-label">Delivery address</p>
+      <p class="detail-value" id="od-cust-address"></p>
+      <p class="detail-label" id="od-landmark-label" style="display:none;">Landmark</p>
+      <p class="detail-value" id="od-cust-landmark" style="display:none;"></p>
+      <button class="detail-map-btn" id="od-map-btn" style="display:none;">📍 Open location on map</button>
+    </div>
+
+    <div class="detail-block">
+      <p class="detail-label">Items</p>
+      <div id="od-items"></div>
+      <div class="item-row item-row-total">
+        <span>Total</span>
+        <span id="od-total"></span>
+      </div>
+    </div>
+
+    <div class="status-actions" id="od-status-actions"></div>
   </section>
 
   <!-- STOCK ITEM -->
@@ -1876,7 +1939,7 @@ function renderHomeOrdersInProgress(list) {
       if (state.orderSelectMode) {
         toggleOrderChecked(o._id, btn);
       } else {
-        window.location.href = 'restaurant-orders.html?order=' + encodeURIComponent(o._id);
+        openOrderDetail(o._id);
       }
     });
     listEl.appendChild(btn);
@@ -1906,6 +1969,105 @@ function toggleOrderChecked(id, el) {
   if (selectedOrderIds.has(id)) selectedOrderIds.delete(id); else selectedOrderIds.add(id);
   el.classList.toggle('checked', selectedOrderIds.has(id));
   updateRouteBar();
+}
+
+// ---------- ORDER DETAIL (accept → preparing → ready → delivered, in-app) ----------
+// Builds a Google Maps link that opens directly at the customer's pinned
+// location. Prefers exact lat/lng saved with the order; falls back to a
+// "lat, lng" string, then to a text search as a last resort.
+function buildMapUrl(o) {
+  if (typeof o.customerLat === 'number' && typeof o.customerLng === 'number') {
+    return `https://www.google.com/maps/search/?api=1&query=${o.customerLat},${o.customerLng}`;
+  }
+  if (o.customerLocation) {
+    const m = String(o.customerLocation).trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/);
+    if (m) return `https://www.google.com/maps/search/?api=1&query=${m[1]},${m[2]}`;
+  }
+  const addr = [o.customerAddress, o.customerLocation].filter(Boolean).join(', ');
+  if (addr) return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(addr)}`;
+  return null;
+}
+
+function openOrderDetail(id) {
+  state.selectedOrderId = id;
+  const o = (state.homeOrdersCache || []).find(x => x._id === id);
+  if (o) renderOrderDetail(o);
+  showScreen('order-detail');
+}
+
+function renderOrderDetail(o) {
+  document.getElementById('od-order-num').textContent = o.orderNumber || o._id;
+  const status = o.status || 'pending';
+  document.getElementById('od-status-title').textContent = status.charAt(0).toUpperCase() + status.slice(1);
+  document.getElementById('od-cust-name').textContent = o.customerName || 'Guest';
+
+  const phoneLink = document.getElementById('od-cust-phone');
+  if (o.customerPhone) {
+    phoneLink.textContent = o.customerPhone;
+    phoneLink.href = "tel:" + o.customerPhone;
+  } else {
+    phoneLink.textContent = '—';
+    phoneLink.removeAttribute('href');
+  }
+  document.getElementById('od-cust-address').textContent = [o.customerAddress, o.customerLocation].filter(Boolean).join(', ') || '—';
+
+  const landmarkLabel = document.getElementById('od-landmark-label');
+  const landmarkValue = document.getElementById('od-cust-landmark');
+  if (o.customerLandmark) {
+    landmarkLabel.style.display = "block";
+    landmarkValue.style.display = "block";
+    landmarkValue.textContent = o.customerLandmark;
+  } else {
+    landmarkLabel.style.display = "none";
+    landmarkValue.style.display = "none";
+  }
+
+  const mapBtn = document.getElementById('od-map-btn');
+  const mapUrl = buildMapUrl(o);
+  if (mapUrl) {
+    mapBtn.style.display = "inline-flex";
+    mapBtn.onclick = () => window.open(mapUrl, '_blank');
+  } else {
+    mapBtn.style.display = "none";
+    mapBtn.onclick = null;
+  }
+
+  const itemsEl = document.getElementById('od-items');
+  itemsEl.innerHTML = "";
+  (o.items || []).forEach(it => {
+    const row = document.createElement('div');
+    row.className = "item-row";
+    row.innerHTML = `<span>${it.qty} × ${it.name}</span><span>₹${it.price * it.qty}</span>`;
+    itemsEl.appendChild(row);
+  });
+  document.getElementById('od-total').textContent = "₹" + (o.total || 0);
+
+  const actionsEl = document.getElementById('od-status-actions');
+  actionsEl.innerHTML = "";
+  const buttons = [];
+  if (status === 'preparing') buttons.push({ label: 'Mark as ready', cls: 'ready', next: 'ready' });
+  if (status === 'ready') buttons.push({ label: 'Mark as delivered', cls: 'delivered', next: 'delivered' });
+  if (status !== 'delivered' && status !== 'cancelled' && status !== 'rejected') {
+    buttons.push({ label: 'Cancel order', cls: 'cancel', next: 'cancelled' });
+  }
+
+  buttons.forEach(b => {
+    const btn = document.createElement('button');
+    btn.className = "status-btn " + b.cls;
+    btn.textContent = b.label;
+    btn.addEventListener('click', () => updateOrderStatus(o._id, b.next));
+    actionsEl.appendChild(btn);
+  });
+}
+
+async function updateOrderStatus(id, newStatus) {
+  try {
+    const { db, ref, update } = window.fb;
+    await update(ref(db, 'restaurants/' + state.restId + '/orders/' + id), { status: newStatus });
+    showToast("Order marked as " + newStatus);
+  } catch (e) {
+    alert("Couldn't update order — check your connection and try again.");
+  }
 }
 
 function updateRouteBar() {
@@ -2020,11 +2182,13 @@ function listenOrdersBadge() {
   onValue(ref(db, 'restaurants/' + state.restId + '/orders'), snap => {
     const pendingList = [];
     const inProgressList = [];
+    let openOrder = null;
     snap.forEach(child => {
       const o = child.val();
       const status = o.status || 'pending';
       if (status === 'pending') pendingList.push({ _id: child.key, ...o });
       if (status === 'preparing' || status === 'ready') inProgressList.push({ _id: child.key, ...o });
+      if (state.selectedOrderId && child.key === state.selectedOrderId) openOrder = { _id: child.key, ...o };
     });
     pendingList.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     inProgressList.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // latest first
@@ -2034,6 +2198,9 @@ function listenOrdersBadge() {
     else { badge.style.display = "none"; }
 
     renderHomeOrdersInProgress(inProgressList);
+    // Keep an open order-detail screen live (e.g. status changing from
+    // another device) without the user needing to back out and re-enter.
+    if (openOrder) renderOrderDetail(openOrder);
 
     // Always reflects the full set of currently-pending orders, so all of
     // them show together in one popup instead of queuing one after another.
