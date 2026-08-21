@@ -2065,6 +2065,7 @@ async function updateOrderStatus(id, newStatus) {
     const { db, ref, update } = window.fb;
     await update(ref(db, 'restaurants/' + state.restId + '/orders/' + id), { status: newStatus });
     showToast("Order marked as " + newStatus);
+    if (newStatus === 'cancelled') playCancelAlert();
   } catch (e) {
     alert("Couldn't update order — check your connection and try again.");
   }
