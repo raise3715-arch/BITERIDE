@@ -1817,8 +1817,14 @@ document.getElementById('rest-id-copy-btn').addEventListener('click', () => {
 // via WhatsApp/etc.; when a customer opens it, the customer app skips
 // straight to this restaurant's menu instead of the home screen. ----------
 const CUSTOMER_APP_BASE_URL = "https://raise3715-arch.github.io/BITERIDE-FOOD-APP/";
+// TODO: replace with your deployed shop-preview endpoint's URL (Cloudflare
+// Worker, e.g. https://shop-preview.<subdomain>.workers.dev — see
+// cloudflare-worker-shop-preview.js). It reads og:title/og:image for this
+// specific shop server-side (so WhatsApp/etc. show the shop's real photo +
+// name) then redirects the human visitor into the actual customer app.
+const SHOP_LINK_PREVIEW_BASE_URL = "https://shop-preview.YOUR-SUBDOMAIN.workers.dev";
 function buildShopLink(id) {
-  return CUSTOMER_APP_BASE_URL + "?shop=" + encodeURIComponent(id);
+  return SHOP_LINK_PREVIEW_BASE_URL + "?id=" + encodeURIComponent(id);
 }
 function renderShopLink(id) {
   const el = document.getElementById('shop-link-value');
