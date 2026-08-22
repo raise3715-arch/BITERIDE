@@ -796,7 +796,7 @@
       <a class="nav-card" id="wallet-add-nav-card" href="#" onclick="openWalletAddScreen(); return false;" style="margin:0; background:#7C5CBF;">
         <span class="nav-card-left" style="color:#fff;">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><rect x="3" y="8" width="18" height="13" rx="2"/><path d="M12 8v13"/><path d="M19 8V6a3 3 0 0 0-6 0 3 3 0 0 0-6 0v2"/></svg>
-          Add Wallet Amount
+          Add Shop Discount
         </span>
         <span class="nav-badge" style="background:#fff;color:#7C5CBF;">Send</span>
       </a>
@@ -939,7 +939,7 @@
     </div>
   </section>
 
-  <!-- ADD WALLET AMOUNT (sends a scratch card to a customer, scoped to this shop) -->
+  <!-- ADD SHOP DISCOUNT (sends a scratch card to a customer, scoped to this shop) -->
   <section class="screen screen-with-tabs" id="screen-wallet-add">
     <div class="px" style="padding-top:32px;">
       <button class="btn-back" onclick="showScreen('account')">
@@ -947,11 +947,11 @@
       </button>
     </div>
     <div class="header">
-      <p class="eyebrow">ADD WALLET AMOUNT</p>
+      <p class="eyebrow">ADD SHOP DISCOUNT</p>
       <h1 class="title">Send a customer a scratch card</h1>
     </div>
     <div class="px">
-      <p class="hint-text">Enter a customer's registered mobile number and an amount. It'll show up as a scratch card in their app, tied to your shop — once they scratch it, the amount is added to their wallet.</p>
+      <p class="hint-text">Enter a customer's registered mobile number and an amount. It'll show up as a scratch card in their app, tied to your shop — once they scratch it, the amount is added as a discount they can only use when ordering from <b>your</b> shop.</p>
 
       <p class="loc-field-label" style="margin-top:16px;">Customer mobile number</p>
       <div class="field">
@@ -1697,7 +1697,7 @@ async function sendWalletAmount() {
       amount,
       createdAt: Date.now()
     });
-    statusEl.textContent = "Sent ₹" + amount + " to " + (customer.name || number) + " — they'll see a scratch card in their app.";
+    statusEl.textContent = "Sent ₹" + amount + " to " + (customer.name || number) + " — they'll see a scratch card in their app, and once revealed it's a discount usable only at your shop.";
     statusEl.style.display = 'block';
     amountInput.value = '';
     renderWalletSendsList();
