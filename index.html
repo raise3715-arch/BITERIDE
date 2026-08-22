@@ -1822,7 +1822,7 @@ const CUSTOMER_APP_BASE_URL = "https://raise3715-arch.github.io/BITERIDE-FOOD-AP
 // cloudflare-worker-shop-preview.js). It reads og:title/og:image for this
 // specific shop server-side (so WhatsApp/etc. show the shop's real photo +
 // name) then redirects the human visitor into the actual customer app.
-const SHOP_LINK_PREVIEW_BASE_URL = "https://shop-preview.YOUR-SUBDOMAIN.workers.dev";
+const SHOP_LINK_PREVIEW_BASE_URL = "https://shop-preview.raise3715.workers.dev";
 function buildShopLink(id) {
   return SHOP_LINK_PREVIEW_BASE_URL + "?id=" + encodeURIComponent(id);
 }
