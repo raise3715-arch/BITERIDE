@@ -760,6 +760,15 @@
         </div>
         <button class="rest-id-copy-btn" id="rest-id-copy-btn" type="button">Copy</button>
       </div>
+
+      <div class="rest-id-box" id="shop-link-box" style="margin-bottom:8px;">
+        <div style="min-width:0;">
+          <p class="rest-id-label">Your shop link — share it, customers land straight on your menu</p>
+          <p class="rest-id-value" id="shop-link-value" style="font-family:'Inter',sans-serif; font-weight:600; font-size:12px;">—</p>
+        </div>
+        <button class="rest-id-copy-btn" id="shop-link-copy-btn" type="button">Copy</button>
+      </div>
+      <button type="button" id="shop-link-share-btn" style="display:none; width:100%; margin:0 0 18px; padding:10px; border-radius:8px; border:1.5px solid var(--marigold); background:none; color:var(--marigold); font-weight:700; font-size:12px; font-family:'Inter',sans-serif; cursor:pointer;">Share link</button>
     </div>
 
     <div class="px" style="margin-top:4px;">
@@ -1601,6 +1610,7 @@ function logInRestaurant(id, data) {
   document.getElementById('gpay-number').value = data.gpayNumber || "";
   updateGpayBadge(data.gpayNumber || "");
   document.getElementById('rest-id-value').textContent = id;
+  renderShopLink(id);
   let restoreScreen = 'home';
   try {
     const saved = localStorage.getItem('asfood_last_screen');
@@ -1800,6 +1810,43 @@ document.getElementById('rest-id-copy-btn').addEventListener('click', () => {
   }).catch(() => {
     alert("Restaurant ID: " + id);
   });
+});
+
+// ---------- SHOP LINK (deep link straight into this shop in the customer
+// app — the shop's own ID as a ?shop= query param). Shared by the seller
+// via WhatsApp/etc.; when a customer opens it, the customer app skips
+// straight to this restaurant's menu instead of the home screen. ----------
+const CUSTOMER_APP_BASE_URL = "https://raise3715-arch.github.io/BITERIDE-FOOD-APP/";
+function buildShopLink(id) {
+  return CUSTOMER_APP_BASE_URL + "?shop=" + encodeURIComponent(id);
+}
+function renderShopLink(id) {
+  const el = document.getElementById('shop-link-value');
+  if (!el) return;
+  el.textContent = id ? buildShopLink(id) : "—";
+  document.getElementById('shop-link-share-btn').style.display = (id && navigator.share) ? "block" : "none";
+}
+document.getElementById('shop-link-copy-btn').addEventListener('click', () => {
+  const id = state.restId || "";
+  if (!id) return;
+  const link = buildShopLink(id);
+  const btn = document.getElementById('shop-link-copy-btn');
+  navigator.clipboard.writeText(link).then(() => {
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = "Copy"; }, 1500);
+  }).catch(() => {
+    alert("Shop link: " + link);
+  });
+});
+document.getElementById('shop-link-share-btn').addEventListener('click', () => {
+  const id = state.restId || "";
+  if (!id) return;
+  const link = buildShopLink(id);
+  navigator.share({
+    title: state.restaurant?.restaurantName || "Order from us",
+    text: "Order from " + (state.restaurant?.restaurantName || "us") + " here:",
+    url: link,
+  }).catch(() => {});
 });
 
 // ---------- R2 PHOTO UPLOAD HELPER ----------
