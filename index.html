@@ -1311,7 +1311,7 @@ function showToast(msg) {
 }
 
 const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
-alarmAudio.loop = true;
+alarmAudio.loop = false;
 
 // Short, one-shot alert played whenever an order is cancelled or rejected
 // (does not loop like alarmAudio — it just needs to notify once).
