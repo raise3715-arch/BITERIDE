@@ -2334,20 +2334,24 @@ async function handleBulkImportFile(e) {
         continue;
       }
 
+      // Relative key (not a full absolute path) so this update() is scoped
+      // to menuRef — matches how every other write in this app targets a
+      // specific restaurant's menu node, and avoids permission issues that
+      // a root-level ref(db) update can hit under path-scoped security rules.
       const newKey = push(menuRef).key;
-      updates['restaurants/' + state.restId + '/menu/' + newKey] = { name, desc, price, photo: "" };
+      updates[newKey] = { name, desc, price, photo: "" };
       added++;
       pending++;
 
       if (pending >= BATCH_SIZE) {
         statusEl.textContent = `Importing… ${added + skipped}/${rows.length} rows processed`;
-        await update(ref(db), updates);
+        await update(menuRef, updates);
         updates = {};
         pending = 0;
       }
     }
     if (pending > 0) {
-      await update(ref(db), updates);
+      await update(menuRef, updates);
     }
 
     statusEl.style.color = added > 0 ? "#2C4A37" : "var(--chili)";
@@ -2355,7 +2359,7 @@ async function handleBulkImportFile(e) {
     showToast(added > 0 ? `${added} items imported` : "No valid rows to import");
   } catch (err) {
     statusEl.style.color = "var(--chili)";
-    statusEl.textContent = "Import failed — check your connection and try again.";
+    statusEl.textContent = "Import failed: " + (err && err.message ? err.message : "check your connection and try again.");
     console.error('[bulk-import] error:', err);
   } finally {
     btn.disabled = false;
