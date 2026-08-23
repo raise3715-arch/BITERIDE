@@ -12,6 +12,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   :root{
     --ink:#0B2545;
@@ -170,6 +171,11 @@
     padding:8px 14px; border-radius:10px; border:none; background:var(--marigold);
     color:var(--ink); font-weight:600; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;
   }
+  .bulk-import-btn{
+    padding:8px 14px; border-radius:10px; border:1.5px solid var(--marigold); background:none;
+    color:var(--marigold); font-weight:600; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px;
+  }
+  .bulk-import-btn:disabled{ opacity:.5; cursor:not-allowed; }
 
   .menu-list{ padding:16px 24px 100px; display:flex; flex-direction:column; gap:12px; }
   .home-orders-list{ padding:16px 24px 4px; display:flex; flex-direction:column; gap:12px; }
@@ -715,11 +721,22 @@
     </div>
     <div class="section-row">
       <h2 class="section-title">Menu items</h2>
-      <button class="add-item-btn" onclick="openItemForm()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Add item
-      </button>
+      <div style="display:flex; gap:8px;">
+        <button class="bulk-import-btn" id="bulk-import-btn" type="button">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--marigold)" stroke-width="2.5"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M4 21h16"/></svg>
+          Bulk import
+        </button>
+        <button class="add-item-btn" onclick="openItemForm()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0B2545" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Add item
+        </button>
+      </div>
     </div>
+    <input type="file" id="bulk-import-input" accept=".xlsx,.xls,.csv" style="display:none;" />
+    <p class="hint-text" style="padding:6px 24px 0; margin:0; font-size:11px; color:#6E8CAE; font-family:'Inter',sans-serif;">
+      Excel columns: <b>Name</b>, <b>Discription</b> (or Description), <b>Price</b>
+    </p>
+    <p id="bulk-import-status" style="padding:4px 24px 0; font-size:12px; color:var(--marigold); font-family:'Inter',sans-serif; display:none;"></p>
     <p id="menu-debug" style="padding:0 24px; font-size:11px; color:#E8A33D; font-family:monospace;"></p>
     <div class="menu-list" id="menu-list"></div>
   </section>
@@ -1548,6 +1565,8 @@ function init() {
   document.getElementById('item-photo-input').addEventListener('change', handlePhotoSelect);
   document.getElementById('item-save-btn').addEventListener('click', saveItem);
   document.getElementById('item-delete-btn').addEventListener('click', deleteItem);
+  document.getElementById('bulk-import-btn').addEventListener('click', () => document.getElementById('bulk-import-input').click());
+  document.getElementById('bulk-import-input').addEventListener('change', handleBulkImportFile);
 
   // Restaurant photo
   document.getElementById('rest-photo-upload-wrap').addEventListener('click', () => document.getElementById('rest-photo-input').click());
@@ -2235,6 +2254,109 @@ async function saveItem() {
   } catch (e) {
     errEl.textContent = "Couldn't save item — check your connection and try again.";
     errEl.style.display = "block";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ---------- BULK IMPORT (Excel) ----------
+// Lets the seller upload an .xlsx/.xls/.csv with columns Name, Discription
+// (or Description) and Price, and adds every row as a menu item in one go.
+// Uses a single multi-path Firebase update() per batch (rather than one
+// write per item) so importing hundreds/thousands of rows stays fast and
+// doesn't hammer the database with individual requests.
+function normalizeHeaderKey(key) {
+  return String(key || "").trim().toLowerCase().replace(/[^a-z]/g, "");
+}
+
+async function handleBulkImportFile(e) {
+  const file = e.target.files[0];
+  e.target.value = ""; // allow re-selecting the same file later
+  if (!file) return;
+
+  const statusEl = document.getElementById('bulk-import-status');
+  const btn = document.getElementById('bulk-import-btn');
+  statusEl.style.display = "block";
+  statusEl.style.color = "var(--marigold)";
+  statusEl.textContent = "Reading file…";
+  btn.disabled = true;
+
+  try {
+    if (typeof XLSX === 'undefined') {
+      throw new Error("Excel reader didn't load — check your connection and try again.");
+    }
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[firstSheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+    if (!rows.length) {
+      statusEl.style.color = "var(--chili)";
+      statusEl.textContent = "No rows found in that file.";
+      return;
+    }
+
+    // Map whatever header names the sheet actually has (Name / Discription /
+    // Description / Price, in any case) onto the fields we need, so small
+    // spelling/casing differences in the sheet don't break the import.
+    const sampleKeys = Object.keys(rows[0]);
+    const findKey = (...aliases) => {
+      const wanted = aliases.map(normalizeHeaderKey);
+      return sampleKeys.find(k => wanted.includes(normalizeHeaderKey(k)));
+    };
+    const nameKey = findKey('name', 'itemname');
+    const descKey = findKey('discription', 'description', 'desc');
+    const priceKey = findKey('price', 'rate', 'amount');
+
+    if (!nameKey || !priceKey) {
+      statusEl.style.color = "var(--chili)";
+      statusEl.textContent = "Couldn't find Name/Price columns. Check your file's header row.";
+      return;
+    }
+
+    const { db, ref, push, update } = window.fb;
+    const menuRef = ref(db, 'restaurants/' + state.restId + '/menu');
+
+    let added = 0, skipped = 0;
+    const BATCH_SIZE = 300; // keep each Firebase update() payload reasonably sized
+    let updates = {};
+    let pending = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const name = String(row[nameKey] || "").trim();
+      const desc = descKey ? String(row[descKey] || "").trim() : "";
+      const price = parseFloat(row[priceKey]);
+
+      if (!name || isNaN(price) || price < 0) {
+        skipped++;
+        continue;
+      }
+
+      const newKey = push(menuRef).key;
+      updates['restaurants/' + state.restId + '/menu/' + newKey] = { name, desc, price, photo: "" };
+      added++;
+      pending++;
+
+      if (pending >= BATCH_SIZE) {
+        statusEl.textContent = `Importing… ${added + skipped}/${rows.length} rows processed`;
+        await update(ref(db), updates);
+        updates = {};
+        pending = 0;
+      }
+    }
+    if (pending > 0) {
+      await update(ref(db), updates);
+    }
+
+    statusEl.style.color = added > 0 ? "#2C4A37" : "var(--chili)";
+    statusEl.textContent = `Done — ${added} item${added === 1 ? '' : 's'} added` + (skipped > 0 ? `, ${skipped} row${skipped === 1 ? '' : 's'} skipped (missing name/price)` : '');
+    showToast(added > 0 ? `${added} items imported` : "No valid rows to import");
+  } catch (err) {
+    statusEl.style.color = "var(--chili)";
+    statusEl.textContent = "Import failed — check your connection and try again.";
+    console.error('[bulk-import] error:', err);
   } finally {
     btn.disabled = false;
   }
