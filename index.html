@@ -734,8 +734,15 @@
     </div>
     <input type="file" id="bulk-import-input" accept=".xlsx,.xls,.csv" style="display:none;" />
     <p class="hint-text" style="padding:6px 24px 0; margin:0; font-size:11px; color:#6E8CAE; font-family:'Inter',sans-serif;">
-      Excel columns: <b>Name</b>, <b>Discription</b> (or Description), <b>Price</b>
+      Excel columns: <b>Name</b>, <b>Discription</b> (or Description), <b>Price</b>, <b>Photo</b> (optional — image link)
     </p>
+    <p style="padding:6px 24px 0; margin:0;">
+      <button class="btn-link" id="bulk-photo-btn" type="button" style="width:auto; padding:0; font-size:12px; text-align:left;">
+        📷 Got 100 photos? Bulk-upload them (name the file same as the stock item to auto-attach) →
+      </button>
+    </p>
+    <input type="file" id="bulk-photo-input" accept="image/*" multiple style="display:none;" />
+    <p id="bulk-photo-status" style="padding:4px 24px 0; font-size:12px; color:var(--marigold); font-family:'Inter',sans-serif; display:none;"></p>
     <p id="bulk-import-status" style="padding:4px 24px 0; font-size:12px; color:var(--marigold); font-family:'Inter',sans-serif; display:none;"></p>
     <p id="menu-debug" style="padding:0 24px; font-size:11px; color:#E8A33D; font-family:monospace;"></p>
     <div class="menu-list" id="menu-list"></div>
@@ -1292,7 +1299,7 @@
 
 <script>
 // ---------- State ----------
-let state = { restId: null, restaurant: null, editingItemId: null, photoDataUrl: "" };
+let state = { restId: null, restaurant: null, editingItemId: null, photoDataUrl: "", menuItems: [] };
 
 // Screens that are safe to jump straight back into after a refresh
 // (they don't depend on in-memory state like which item is being edited).
@@ -1567,6 +1574,8 @@ function init() {
   document.getElementById('item-delete-btn').addEventListener('click', deleteItem);
   document.getElementById('bulk-import-btn').addEventListener('click', () => document.getElementById('bulk-import-input').click());
   document.getElementById('bulk-import-input').addEventListener('change', handleBulkImportFile);
+  document.getElementById('bulk-photo-btn').addEventListener('click', () => document.getElementById('bulk-photo-input').click());
+  document.getElementById('bulk-photo-input').addEventListener('change', handleBulkPhotoUpload);
 
   // Restaurant photo
   document.getElementById('rest-photo-upload-wrap').addEventListener('click', () => document.getElementById('rest-photo-input').click());
@@ -2041,6 +2050,7 @@ function listenMenu() {
     const mine = all[state.restId] || {};
     const menuObj = mine.menu || {};
     const items = Object.keys(menuObj).map(k => ({ id: k, ...menuObj[k] }));
+    state.menuItems = items; // cached for photo-name matching in bulk photo upload
     console.log('[stock-debug] restId=', state.restId, 'items received=', items.length, items);
     const dbg = document.getElementById('menu-debug');
     if (dbg) dbg.textContent = 'Debug: restId=' + state.restId + ' | server sent ' + items.length + ' item(s): ' + items.map(i => i.name).join(', ');
@@ -2259,9 +2269,109 @@ async function saveItem() {
   }
 }
 
+// ---------- BULK PHOTO UPLOAD (→ CSV of links) ----------
+// Lets the seller pick many photos at once (e.g. 100), uploads each to the
+// same Cloudinary account used elsewhere in this app, and then downloads a
+// CSV with two columns: FileName, Photo (the hosted image link). The seller
+// can open that CSV, rename the FileName column's values to match their
+// item names (or just re-order rows to match), and paste the Photo column
+// into their main import Excel's Photo column.
+function csvEscape(val) {
+  const s = String(val == null ? "" : val);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function stripExt(filename) {
+  return String(filename || "").replace(/\.[^/.]+$/, "");
+}
+// Loose match so "Chicken Biryani.jpg", "ChickenBiryani.jpg", and
+// "chicken   biryani.jpg" all match an item named "Chicken Biryani" —
+// spaces are stripped out entirely (not just collapsed) before comparing.
+function normalizeMatchName(s) {
+  return String(s || "").trim().toLowerCase().replace(/\s+/g, "");
+}
+async function handleBulkPhotoUpload(e) {
+  const files = Array.from(e.target.files || []);
+  e.target.value = ""; // allow re-selecting the same files later
+  if (!files.length) return;
+
+  const statusEl = document.getElementById('bulk-photo-status');
+  const btn = document.getElementById('bulk-photo-btn');
+  statusEl.style.display = "block";
+  statusEl.style.color = "var(--marigold)";
+  btn.disabled = true;
+
+  // Build a lookup of existing stock item names -> id, so a photo whose
+  // filename matches an item name can be attached to that item directly
+  // instead of only ending up in the CSV.
+  const nameToId = {};
+  state.menuItems.forEach(it => { nameToId[normalizeMatchName(it.name)] = it.id; });
+
+  const { db, ref, update } = window.fb;
+  const unmatched = []; // { file, url } — goes into the CSV for manual matching
+  let uploaded = 0, failed = 0, attached = 0;
+
+  for (const file of files) {
+    statusEl.textContent = `Uploading photo ${uploaded + failed + 1}/${files.length}…`;
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = ev => resolve(ev.target.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+      const img = await new Promise((resolve, reject) => {
+        const im = new Image();
+        im.onload = () => resolve(im);
+        im.onerror = reject;
+        im.src = dataUrl;
+      });
+      const blob = await resizeImageToBlob(img, 600, 0.7);
+      const url = await uploadPhotoToCloudinary(blob);
+      uploaded++;
+
+      const matchId = nameToId[normalizeMatchName(stripExt(file.name))];
+      if (matchId) {
+        await update(ref(db, 'restaurants/' + state.restId + '/menu/' + matchId), { photo: url });
+        attached++;
+      } else {
+        unmatched.push({ file: file.name, url });
+      }
+    } catch (err) {
+      failed++;
+    }
+  }
+
+  // Any photo that didn't match an existing stock item's name still gets a
+  // downloadable CSV (FileName, Photo) for manual matching / bulk import.
+  if (unmatched.length) {
+    const csvRows = [["FileName", "Photo"]].concat(
+      unmatched.map(r => [csvEscape(stripExt(r.file)), csvEscape(r.url)])
+    );
+    const csvContent = csvRows.map(r => r.join(",")).join("\n");
+    const csvBlob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const dlUrl = URL.createObjectURL(csvBlob);
+    const a = document.createElement('a');
+    a.href = dlUrl;
+    a.download = "photo-links.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(dlUrl);
+  }
+
+  statusEl.style.color = failed > 0 ? "var(--chili)" : "#2C4A37";
+  let msg = `Done — ${uploaded} uploaded`;
+  if (attached > 0) msg += `, ${attached} matched by name and attached to your stock items`;
+  if (unmatched.length) msg += `, ${unmatched.length} had no name match — downloaded photo-links.csv for those`;
+  if (failed > 0) msg += `, ${failed} failed`;
+  statusEl.textContent = msg + ".";
+  btn.disabled = false;
+}
+
 // ---------- BULK IMPORT (Excel) ----------
 // Lets the seller upload an .xlsx/.xls/.csv with columns Name, Discription
-// (or Description) and Price, and adds every row as a menu item in one go.
+// (or Description), Price, and an optional Photo column (a direct image
+// link), and adds every row as a menu item — photo and all — in one go.
 // Uses a single multi-path Firebase update() per batch (rather than one
 // write per item) so importing hundreds/thousands of rows stays fast and
 // doesn't hammer the database with individual requests.
@@ -2308,6 +2418,7 @@ async function handleBulkImportFile(e) {
     const nameKey = findKey('name', 'itemname');
     const descKey = findKey('discription', 'description', 'desc');
     const priceKey = findKey('price', 'rate', 'amount');
+    const photoKey = findKey('photo', 'photourl', 'photolink', 'image', 'imageurl', 'imagelink', 'img', 'picture');
 
     if (!nameKey || !priceKey) {
       statusEl.style.color = "var(--chili)";
@@ -2318,7 +2429,7 @@ async function handleBulkImportFile(e) {
     const { db, ref, push, update } = window.fb;
     const menuRef = ref(db, 'restaurants/' + state.restId + '/menu');
 
-    let added = 0, skipped = 0;
+    let added = 0, skipped = 0, withPhoto = 0;
     const BATCH_SIZE = 300; // keep each Firebase update() payload reasonably sized
     let updates = {};
     let pending = 0;
@@ -2328,6 +2439,11 @@ async function handleBulkImportFile(e) {
       const name = String(row[nameKey] || "").trim();
       const desc = descKey ? String(row[descKey] || "").trim() : "";
       const price = parseFloat(row[priceKey]);
+      // Photo column holds a direct image link (e.g. a Cloudinary/Google Drive/
+      // any public image URL) — stored as-is, same as how single-item photos
+      // are saved (state.photoDataUrl is just a URL string too).
+      let photo = photoKey ? String(row[photoKey] || "").trim() : "";
+      if (photo && !/^https?:\/\//i.test(photo)) photo = ""; // ignore junk/non-URL values
 
       if (!name || isNaN(price) || price < 0) {
         skipped++;
@@ -2339,8 +2455,9 @@ async function handleBulkImportFile(e) {
       // specific restaurant's menu node, and avoids permission issues that
       // a root-level ref(db) update can hit under path-scoped security rules.
       const newKey = push(menuRef).key;
-      updates[newKey] = { name, desc, price, photo: "" };
+      updates[newKey] = { name, desc, price, photo };
       added++;
+      if (photo) withPhoto++;
       pending++;
 
       if (pending >= BATCH_SIZE) {
@@ -2355,7 +2472,7 @@ async function handleBulkImportFile(e) {
     }
 
     statusEl.style.color = added > 0 ? "#2C4A37" : "var(--chili)";
-    statusEl.textContent = `Done — ${added} item${added === 1 ? '' : 's'} added` + (skipped > 0 ? `, ${skipped} row${skipped === 1 ? '' : 's'} skipped (missing name/price)` : '');
+    statusEl.textContent = `Done — ${added} item${added === 1 ? '' : 's'} added` + (withPhoto > 0 ? ` (${withPhoto} with photo)` : '') + (skipped > 0 ? `, ${skipped} row${skipped === 1 ? '' : 's'} skipped (missing name/price)` : '');
     showToast(added > 0 ? `${added} items imported` : "No valid rows to import");
   } catch (err) {
     statusEl.style.color = "var(--chili)";
