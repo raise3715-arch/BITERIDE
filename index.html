@@ -1310,63 +1310,94 @@ function showToast(msg) {
   window._toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
 }
 
-const alarmAudio = new Audio('Boat_Alarm_Alert.mp3');
-alarmAudio.loop = false;
+// ---------- Alert sounds (Web Audio API) ----------
+// IMPORTANT: we deliberately do NOT use an <audio>/<video> element here.
+// Chrome treats any playing HTMLMediaElement as "media" and shows the
+// system-level Now Playing card (play/pause/rewind, app name, AirPods
+// route picker etc.) — the same card music/video apps get. Playing the
+// same file through the Web Audio API (AudioContext + AudioBufferSourceNode)
+// is just a sound effect as far as Chrome is concerned, so no media card
+// ever appears — this is how apps like Swiggy fire order-alert sounds.
+let audioCtx = null;
+let alarmBuffer = null;
+let cancelBuffer = null;
+let alarmSource = null;
 
-// Short, one-shot alert played whenever an order is cancelled or rejected
-// (does not loop like alarmAudio — it just needs to notify once).
-const cancelAlertAudio = new Audio('Order_Cancelled_Alert.m4a');
+function getAudioCtx() {
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+async function loadBuffer(url) {
+  const ctx = getAudioCtx();
+  const res = await fetch(url);
+  const arrBuf = await res.arrayBuffer();
+  return await ctx.decodeAudioData(arrBuf);
+}
+
 function playCancelAlert() {
   try {
-    cancelAlertAudio.currentTime = 0;
-    cancelAlertAudio.play().catch(() => {});
+    const ctx = getAudioCtx();
+    if (!cancelBuffer) return; // not loaded yet — silently skip rather than error
+    const src = ctx.createBufferSource();
+    src.buffer = cancelBuffer;
+    src.connect(ctx.destination);
+    src.start(0);
   } catch (e) {}
 }
 
 // ---------- Audio unlock ----------
-// Mobile browsers block unmuted audio.play() unless it happens right after
-// a real user tap — this is a fixed browser rule, not something a website
-// can turn off. What we CAN do: probe silently the moment the app loads.
-// Once this origin has been used (and tapped) enough times before, browsers
-// grant autoplay without needing a fresh tap — in that case the probe below
-// succeeds on its own and the gate below never even appears. The visible
-// gate is only a fallback for when the probe is still blocked.
+// Mobile browsers block unmuted audio unless it happens right after a real
+// user tap — this is a fixed browser rule, not something a website can turn
+// off. What we CAN do: probe/resume the AudioContext silently the moment the
+// app loads. Once this origin has been used (and tapped) enough times
+// before, browsers grant autoplay without needing a fresh tap — in that
+// case the probe below succeeds on its own and the gate never even appears.
+// The visible gate is only a fallback for when it's still blocked.
 let audioUnlocked = false;
-function unlockAudio() {
+async function unlockAudio() {
   if (audioUnlocked) return;
-  alarmAudio.play().then(() => {
+  try {
+    const ctx = getAudioCtx();
+    if (ctx.state === 'suspended') await ctx.resume();
+    if (!alarmBuffer) alarmBuffer = await loadBuffer('Boat_Alarm_Alert.mp3');
+    if (!cancelBuffer) cancelBuffer = await loadBuffer('Order_Cancelled_Alert.m4a');
     audioUnlocked = true;
-    alarmAudio.pause();
-    alarmAudio.currentTime = 0;
     document.getElementById('audio-gate').classList.add('hide');
     try { localStorage.setItem('asfood_audio_enabled', '1'); } catch (e) {}
-  }).catch(() => {
+  } catch (e) {
     // Still locked — leave the gate up so the next tap on it retries.
-  });
+  }
 }
 document.getElementById('audio-gate-btn').addEventListener('click', unlockAudio);
 document.getElementById('audio-gate').addEventListener('click', unlockAudio);
 document.addEventListener('click', unlockAudio, { capture: true });
 document.addEventListener('touchstart', unlockAudio, { capture: true });
-// Silent, gesture-less probe on every load — near-zero volume so a
-// successful probe is inaudible, restored right after.
-alarmAudio.volume = 0.01;
 unlockAudio();
-setTimeout(() => { alarmAudio.volume = 1; }, 300);
 
 let vibrateInterval = null;
 function startRinging() {
   stopRinging();
-  alarmAudio.currentTime = 0;
-  alarmAudio.play().catch(() => {});
+  try {
+    const ctx = getAudioCtx();
+    if (alarmBuffer) {
+      alarmSource = ctx.createBufferSource();
+      alarmSource.buffer = alarmBuffer;
+      alarmSource.loop = false;
+      alarmSource.connect(ctx.destination);
+      alarmSource.start(0);
+    }
+  } catch (e) {}
   if (navigator.vibrate) {
     navigator.vibrate([500, 300, 500, 300, 500]);
     vibrateInterval = setInterval(() => navigator.vibrate([500, 300, 500, 300, 500]), 2000);
   }
 }
 function stopRinging() {
-  alarmAudio.pause();
-  alarmAudio.currentTime = 0;
+  if (alarmSource) {
+    try { alarmSource.stop(0); } catch (e) {}
+    alarmSource = null;
+  }
   if (vibrateInterval) { clearInterval(vibrateInterval); vibrateInterval = null; }
   if (navigator.vibrate) navigator.vibrate(0);
 }
