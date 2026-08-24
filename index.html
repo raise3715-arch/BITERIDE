@@ -322,7 +322,10 @@
 
   /* Swiggy-style new order popup */
   .order-popup-overlay{
-    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:2000;
+    /* Highest z-index in the app on purpose — a new order must always pop
+       up on top, even if the restaurant is inside support chat (6000) or
+       the operator panel (7000) when it comes in. */
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9000;
     display:none; align-items:flex-end; justify-content:center;
   }
   .order-popup-overlay.show{ display:flex; }
@@ -1272,24 +1275,36 @@
 
   // ---------- Reliable reconnect after the app is minimized ----------
   // Mobile browsers/PWAs freeze the RTDB websocket while the app is in the
-  // background. Left alone, the SDK sometimes comes back "stuck" —
-  // connected in name but not actually receiving new orders — so reopening
-  // the app can silently miss incoming orders until something else happens
-  // to trigger a reconnect. Forcing a clean goOffline()/goOnline() cycle
-  // exactly when the app becomes hidden/visible guarantees a fresh socket
-  // every time the restaurant comes back, with no duplicate listeners (the
-  // existing onValue subscriptions elsewhere in this file are only ever
-  // attached once — this just resets the connection they ride on).
-  let wasHidden = false;
-  document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      wasHidden = true;
-      goOffline(db);
-    } else if (wasHidden) {
-      wasHidden = false;
-      goOnline(db);
-    }
+  // background, and can come back "stuck" — connected in name but not
+  // actually receiving new orders — so reopening the app can silently miss
+  // incoming orders until something else happens to trigger a reconnect.
+  //
+  // NOTE: we used to force this with a manual goOffline()/goOnline() cycle
+  // tied to visibilitychange. That backfired: on many mobile browsers
+  // 'visibilitychange' doesn't fire reliably in both directions (hidden
+  // fires but the matching visible doesn't, especially across quick app
+  // switches), which left the socket stuck in goOffline() with nothing to
+  // bring it back except a full page reload — i.e. exactly the "only
+  // shows new orders after refresh" symptom.
+  //
+  // Instead: never force the connection offline ourselves. Just watch
+  // Firebase's own `.info/connected` signal, and whenever the app becomes
+  // visible again, nudge goOnline() as a safe no-op "kick" (harmless if
+  // already connected, and helps recover a stalled socket if not). A
+  // watchdog also checks periodically while the tab is visible so a stall
+  // gets fixed even without a visibility change event at all.
+  let isConnected = true;
+  onValue(ref(db, '.info/connected'), snap => {
+    isConnected = snap.val() === true;
   });
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) goOnline(db);
+  });
+
+  setInterval(() => {
+    if (!document.hidden && !isConnected) goOnline(db);
+  }, 15000);
 
   // ---- Cloudinary photo upload (free, no card, no backend needed) ----
   window.CLOUDINARY_CLOUD_NAME = "gsbs6xkx";
