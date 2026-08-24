@@ -1258,6 +1258,7 @@
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getDatabase, ref, onValue, push, set, get, update, remove, goOffline, goOnline } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  import { getMessaging, getToken, isSupported } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCrM5wKwsnGtIc7HSTk_5R1d3dXEcYyd7o",
@@ -1272,6 +1273,35 @@
   const fbApp = initializeApp(firebaseConfig);
   const db = getDatabase(fbApp);
   window.fb = { db, ref, onValue, push, set, get, update, remove };
+
+  // ---------- Push notifications (Firebase Cloud Messaging) ----------
+  // Lets a NEW ORDER wake the phone with a real system notification even
+  // when this app/tab is fully closed. Needs three things set up once in
+  // the Firebase console (all free, no card):
+  //   1. Project settings -> Cloud Messaging -> Web Push certificates ->
+  //      Generate key pair. Paste that key below as FCM_VAPID_KEY.
+  //   2. sw.js must contain the firebase-messaging background handler
+  //      (see firebase-messaging-sw.js reference / snippet supplied).
+  //   3. Something must actually call FCM's send API when a new order is
+  //      created (a small Cloudflare Worker — see cloudflare-worker.js).
+  const FCM_VAPID_KEY = "BJy2vLBreoMThId_Nm1pQlJWpAlcYdG4U2XW0eEW8_98xoA8ajBjwPGVlKNZSAgj9QBubFO3D5BkkqVYJvDHL3Q";
+
+  window.setupPushForRestaurant = async function (restId) {
+    try {
+      if (!('Notification' in window) || !(await isSupported())) return;
+      if (FCM_VAPID_KEY.startsWith('PASTE_')) return; // not configured yet
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') return;
+      const reg = await navigator.serviceWorker.ready;
+      const messaging = getMessaging(fbApp);
+      const token = await getToken(messaging, { vapidKey: FCM_VAPID_KEY, serviceWorkerRegistration: reg });
+      if (token) {
+        await set(ref(db, 'restaurants/' + restId + '/fcmToken'), token);
+      }
+    } catch (e) {
+      console.warn('Push setup skipped:', e && e.message);
+    }
+  };
 
   // ---------- Reliable reconnect after the app is minimized ----------
   // Mobile browsers/PWAs freeze the RTDB websocket while the app is in the
@@ -1698,6 +1728,7 @@ function logInRestaurant(id, data) {
   // would stack duplicate onValue subscriptions on the same paths.
   if (!state.listenersAttached) {
     state.listenersAttached = true;
+    if (window.setupPushForRestaurant) window.setupPushForRestaurant(id);
     listenMenu();
     listenOrdersBadge();
     listenPaymentPending();
