@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Restaurant Partner</title>
+<title>NESH PARTNER</title>
 <link rel="manifest" href="./manifest.json">
 <meta name="theme-color" content="#17A9E0">
-<link rel="apple-touch-icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-512.png">
 <link rel="icon" href="./icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
@@ -557,7 +557,7 @@
   <!-- LOGIN -->
   <section class="screen active" id="screen-login">
     <div class="header">
-      <p class="eyebrow">RESTAURANT PARTNER</p>
+      <p class="eyebrow">NESH PARTNER</p>
       <h1 class="title">Welcome back</h1>
     </div>
     <div class="px stack">
@@ -652,7 +652,7 @@
       <button class="install-banner-close" id="pwaInstallClose" aria-label="Dismiss">✕</button>
       <img src="./icon-192.png" alt="App icon">
       <div class="install-banner-text">
-        <p class="t">Restaurant Partner</p>
+        <p class="t">NESH PARTNER</p>
         <p class="s"><span class="star">★★★★★</span> Install for faster order alerts</p>
       </div>
       <button class="install-banner-btn" id="pwaInstallBtn">Install</button>
@@ -760,7 +760,7 @@
     </div>
     <div class="header">
       <p class="eyebrow">ACCOUNT</p>
-      <h1 class="title">Restaurant details</h1>
+      <h1 class="title" id="account-details-title">Shop details</h1>
     </div>
 
     <label class="rest-photo-upload" id="rest-photo-upload-wrap">
@@ -779,10 +779,41 @@
       <span class="type-badge" id="account-type-badge">Hotel</span>
     </div>
 
+    <div class="px" style="margin-top:16px;">
+      <div class="pay-pending-card" id="shop-avail-card">
+        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+          <p class="rest-title" style="font-size:15px; margin:0;">Shop availability</p>
+          <span class="nav-badge" id="shop-avail-badge" style="background:#1f7a3d;">Available</span>
+        </div>
+        <p class="hint-text" id="shop-avail-hint" style="margin-bottom:12px;">Customers can see your shop and order normally.</p>
+        <button type="button" class="btn-danger" id="shop-avail-toggle-btn" style="width:100%;">Mark shop unavailable</button>
+      </div>
+    </div>
+
     <div class="px" style="margin-top:20px;">
+      <div class="section-row" style="padding:0 0 8px;">
+        <h2 class="section-title">Location</h2>
+        <span class="nav-badge" id="location-status-badge" style="background:#6E8CAE;">Not set</span>
+      </div>
+      <div class="field" style="margin-bottom:14px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F80ED" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>
+        <input id="account-address" type="text" placeholder="Address" />
+      </div>
+      <div class="row-flex" style="margin-bottom:10px;">
+        <div class="field flex-1">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F80ED" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          <input id="account-location" type="text" placeholder="Live location" readonly />
+        </div>
+        <button type="button" class="gps-btn" id="account-gps-btn">Use GPS</button>
+      </div>
+      <p class="hint-text" style="margin-bottom:12px;">Updates where customers see you on the map and how delivery distance is calculated.</p>
+      <button class="btn-primary" id="account-location-save-btn" style="margin-bottom:8px;">Save Location</button>
+    </div>
+
+    <div class="px" style="margin-top:4px;">
       <div class="rest-id-box" id="rest-id-box">
         <div>
-          <p class="rest-id-label">Restaurant ID (for auto-payment setup)</p>
+          <p class="rest-id-label" id="rest-id-label-text">Shop ID (for auto-payment setup)</p>
           <p class="rest-id-value" id="rest-id-value">—</p>
         </div>
         <button class="rest-id-copy-btn" id="rest-id-copy-btn" type="button">Copy</button>
@@ -908,6 +939,10 @@
       </div>
       <div class="field">
         <input id="item-price" type="number" inputmode="decimal" placeholder="Price (₹)" />
+      </div>
+      <div class="field" style="cursor:pointer;" id="item-unavailable-wrap">
+        <input id="item-unavailable" type="checkbox" style="width:16px; height:16px; accent-color:var(--chili); margin:0; flex-shrink:0;" />
+        <label for="item-unavailable" style="cursor:pointer; color:var(--cloud); font-size:14px;">Mark unavailable (hidden from customers)</label>
       </div>
       <p class="error-text" id="item-error" style="display:none;"></p>
       <button class="btn-primary" id="item-save-btn">Save item</button>
@@ -1103,6 +1138,10 @@
       </span>
       Account
     </button>
+    <button class="tab-item" id="tab-shop-details" onclick="showScreen('account')">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/></svg>
+      <span id="tab-shop-details-label">Shop Details</span>
+    </button>
   </nav>
 
 </div>
@@ -1135,7 +1174,7 @@
       <div class="op-home-header">
         <div>
           <h2>Operator Panel</h2>
-          <p>Restaurant Partner &middot; Texi and Food</p>
+          <p>NESH PARTNER &middot; Texi and Food</p>
         </div>
         <button class="op-logout-btn" onclick="opLogout()">Logout</button>
       </div>
@@ -1602,6 +1641,32 @@ function init() {
   document.getElementById('shop-discount-photo-remove-btn').addEventListener('click', removeShopDiscountPhoto);
 }
 
+// Works inside the Capacitor native app (uses the @capacitor/geolocation
+// plugin, which properly triggers the Android runtime permission dialog)
+// and falls back to the plain browser API when opened in a normal tab.
+async function getCurrentPositionCompat(options) {
+  const geoPlugin = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Geolocation;
+  if (geoPlugin) {
+    let perm = await geoPlugin.checkPermissions();
+    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+      perm = await geoPlugin.requestPermissions();
+    }
+    if (perm.location !== 'granted' && perm.coarseLocation !== 'granted') {
+      const err = new Error('Location permission denied');
+      err.code = 1;
+      throw err;
+    }
+    return geoPlugin.getCurrentPosition(options);
+  }
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Location unavailable on this device'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(resolve, reject, options);
+  });
+}
+
 function useGps() {
   const btn = document.getElementById('reg-gps-btn');
   const input = document.getElementById('reg-location');
@@ -1610,17 +1675,35 @@ function useGps() {
     return;
   }
   btn.textContent = "Locating…";
-  navigator.geolocation.getCurrentPosition(
-    pos => {
+  getCurrentPositionCompat({ enableHighAccuracy: true, timeout: 8000 })
+    .then(pos => {
       input.value = pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5);
       btn.textContent = "Use GPS";
-    },
-    () => {
+    })
+    .catch(() => {
       input.value = "Location permission denied";
       btn.textContent = "Use GPS";
-    },
-    { enableHighAccuracy: true, timeout: 8000 }
-  );
+    });
+}
+
+function useGpsFor(inputId, btnId) {
+  const btn = document.getElementById(btnId);
+  const input = document.getElementById(inputId);
+  if (!navigator.geolocation) {
+    input.value = "Location unavailable on this device";
+    return;
+  }
+  const prevText = btn.textContent;
+  btn.textContent = "Locating…";
+  getCurrentPositionCompat({ enableHighAccuracy: true, timeout: 8000 })
+    .then(pos => {
+      input.value = pos.coords.latitude.toFixed(5) + ", " + pos.coords.longitude.toFixed(5);
+      btn.textContent = prevText;
+    })
+    .catch(() => {
+      input.value = "Location permission denied";
+      btn.textContent = prevText;
+    });
 }
 
 // ---------- LOGIN ----------
@@ -1669,6 +1752,12 @@ async function doLogin() {
   }
 }
 
+function bizNoun(businessType) {
+  // "Restaurant" only makes sense for Hotel-type partners; groceries and
+  // online shops get the generic "Shop" wording instead.
+  return businessType === 'hotel' || !businessType ? 'Restaurant' : 'Shop';
+}
+
 function logInRestaurant(id, data) {
   state.restId = id;
   state.restaurant = data;
@@ -1679,7 +1768,13 @@ function logInRestaurant(id, data) {
   document.getElementById('home-type-badge').textContent = data.businessType === 'groceries' ? 'Groceries' : data.businessType === 'online_shop' ? 'Online Shop' : 'Hotel';
   document.getElementById('account-rest-name').textContent = data.restaurantName || id;
   document.getElementById('account-rest-address').textContent = data.address || "";
+  document.getElementById('account-address').value = data.address || "";
+  document.getElementById('account-location').value = data.location || "";
+  updateLocationBadge(data.location || "");
   document.getElementById('account-type-badge').textContent = data.businessType === 'groceries' ? 'Groceries' : data.businessType === 'online_shop' ? 'Online Shop' : 'Hotel';
+  document.getElementById('account-details-title').textContent = bizNoun(data.businessType) + ' details';
+  document.getElementById('rest-id-label-text').textContent = bizNoun(data.businessType) + ' ID (for auto-payment setup)';
+  document.getElementById('tab-shop-details-label').textContent = bizNoun(data.businessType) + ' Details';
   renderRestPhoto(data.photo || "");
   document.getElementById('gpay-number').value = data.gpayNumber || "";
   updateGpayBadge(data.gpayNumber || "");
@@ -1709,6 +1804,7 @@ function logInRestaurant(id, data) {
   updateZoneBadge();
   updateDeliveryChargeBadge();
   updateShopDiscountBadge();
+  renderShopAvailability();
   document.getElementById('support-fab').classList.add('show');
 }
 
@@ -1719,6 +1815,67 @@ function openStockScreen() {
 function openDueScreen() {
   showScreen('due');
 }
+
+// ---------- SHOP AVAILABILITY (whole shop on/off, with a custom message
+// shown to customers instead of the menu while it's off) ----------
+function renderShopAvailability() {
+  const r = state.restaurant || {};
+  const unavailable = !!r.shopUnavailable;
+  const badge = document.getElementById('shop-avail-badge');
+  const hint = document.getElementById('shop-avail-hint');
+  const btn = document.getElementById('shop-avail-toggle-btn');
+  if (!badge || !hint || !btn) return;
+  if (unavailable) {
+    badge.textContent = "Unavailable";
+    badge.style.background = "var(--chili)";
+    hint.textContent = 'Customers only see this message, no items: "' + (r.shopUnavailableMessage || "") + '"';
+    btn.textContent = "Mark shop available again";
+  } else {
+    badge.textContent = "Available";
+    badge.style.background = "#1f7a3d";
+    hint.textContent = "Customers can see your shop and order normally.";
+    btn.textContent = "Mark shop unavailable";
+  }
+}
+
+async function toggleShopAvailability() {
+  const r = state.restaurant || {};
+  const { db, ref, update } = window.fb;
+  const btn = document.getElementById('shop-avail-toggle-btn');
+  if (r.shopUnavailable) {
+    btn.disabled = true;
+    try {
+      await update(ref(db, 'restaurants/' + state.restId), { shopUnavailable: false });
+      state.restaurant = { ...r, shopUnavailable: false };
+      renderShopAvailability();
+      showToast("Shop marked available");
+    } catch (e) {
+      showToast("Couldn't update — check your connection and try again.");
+    } finally {
+      btn.disabled = false;
+    }
+    return;
+  }
+  const msg = prompt(
+    "Message customers will see instead of your menu (e.g. \"Closed today, back tomorrow at 10am\"):",
+    r.shopUnavailableMessage || "We're currently unavailable. Please check back soon."
+  );
+  if (msg === null) return; // cancelled
+  const trimmed = msg.trim();
+  if (!trimmed) { showToast("Enter a message first"); return; }
+  btn.disabled = true;
+  try {
+    await update(ref(db, 'restaurants/' + state.restId), { shopUnavailable: true, shopUnavailableMessage: trimmed });
+    state.restaurant = { ...r, shopUnavailable: true, shopUnavailableMessage: trimmed };
+    renderShopAvailability();
+    showToast("Shop marked unavailable");
+  } catch (e) {
+    showToast("Couldn't update — check your connection and try again.");
+  } finally {
+    btn.disabled = false;
+  }
+}
+document.getElementById('shop-avail-toggle-btn').addEventListener('click', toggleShopAvailability);
 
 // ---------- SHOP DISCOUNT (one flat amount, auto-shown to every customer
 // checking out with this shop — no per-customer targeting) ----------
@@ -1839,6 +1996,46 @@ function openDeliveryChargesScreen() {
 function openAccountScreen() {
   showScreen('account');
 }
+
+function updateLocationBadge(locationStr) {
+  const badge = document.getElementById('location-status-badge');
+  if (parseRestLatLng(locationStr)) {
+    badge.textContent = "Set";
+    badge.style.background = "var(--leaf)";
+  } else {
+    badge.textContent = "Not set";
+    badge.style.background = "#6E8CAE";
+  }
+}
+
+async function saveAccountLocation() {
+  const address = document.getElementById('account-address').value.trim();
+  const location = document.getElementById('account-location').value.trim();
+  if (location && !parseRestLatLng(location)) {
+    alert("Tap \"Use GPS\" to capture your live location before saving, or clear the location field.");
+    return;
+  }
+  const btn = document.getElementById('account-location-save-btn');
+  btn.disabled = true;
+  const prevText = btn.textContent;
+  btn.textContent = "Saving…";
+  try {
+    const { db, ref, update } = window.fb;
+    await update(ref(db, 'restaurants/' + state.restId), { address, location });
+    state.restaurant = { ...(state.restaurant || {}), address, location };
+    document.getElementById('home-rest-address').textContent = address || "";
+    document.getElementById('account-rest-address').textContent = address || "";
+    updateLocationBadge(location);
+    showToast("Location updated");
+  } catch (e) {
+    alert("Couldn't save location — check your connection and try again.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prevText;
+  }
+}
+document.getElementById('account-gps-btn').addEventListener('click', () => useGpsFor('account-location', 'account-gps-btn'));
+document.getElementById('account-location-save-btn').addEventListener('click', saveAccountLocation);
 
 function updateGpayBadge(number) {
   const badge = document.getElementById('gpay-status-badge');
@@ -2094,11 +2291,12 @@ function renderMenu(items) {
     try {
       const card = document.createElement('div');
       card.className = "chit";
+      if (it.unavailable) card.style.opacity = "0.6";
       card.innerHTML = `
         <div class="menu-row">
           ${it.photo ? `<img class="menu-photo" src="${it.photo}" />` : `<div class="menu-photo"></div>`}
           <div class="menu-info">
-            <p class="menu-name">${it.name}</p>
+            <p class="menu-name">${it.name}${it.unavailable ? ' <span class="nav-badge" style="background:var(--chili); font-size:9px; vertical-align:middle;">Unavailable</span>' : ''}</p>
             <p class="menu-desc">${it.desc || ""}</p>
             <p class="menu-price">₹${it.price}</p>
           </div>
@@ -2123,6 +2321,7 @@ function openItemForm(item) {
   document.getElementById('item-name').value = item ? item.name : "";
   document.getElementById('item-desc').value = item ? (item.desc || "") : "";
   document.getElementById('item-price').value = item ? item.price : "";
+  document.getElementById('item-unavailable').checked = !!(item && item.unavailable);
   document.getElementById('item-error').style.display = "none";
   document.getElementById('item-delete-btn').style.display = item ? "block" : "none";
   const linkWrap = document.getElementById('item-link-wrap');
@@ -2269,7 +2468,7 @@ async function saveItem() {
   btn.disabled = true;
   try {
     const { db, ref, push, set, update } = window.fb;
-    const data = { name, desc, price, photo: state.photoDataUrl || "" };
+    const data = { name, desc, price, photo: state.photoDataUrl || "", unavailable: document.getElementById('item-unavailable').checked };
     if (state.editingItemId) {
       await update(ref(db, 'restaurants/' + state.restId + '/menu/' + state.editingItemId), data);
     } else {
@@ -2756,14 +2955,10 @@ function stopForMaps(o) {
 function goToSelectedOrders() {
   const btn = document.getElementById('home-route-btn');
   const panel = document.getElementById('home-route-panel');
-  if (!navigator.geolocation) {
-    alert("Location isn't available on this device.");
-    return;
-  }
   btn.disabled = true;
   btn.textContent = "Locating…";
-  navigator.geolocation.getCurrentPosition(
-    pos => {
+  getCurrentPositionCompat({ enableHighAccuracy: true, timeout: 10000 })
+    .then(pos => {
       btn.disabled = false;
       btn.textContent = "Go";
       const myLat = pos.coords.latitude, myLng = pos.coords.longitude;
@@ -2810,14 +3005,12 @@ function goToSelectedOrders() {
         url += '&waypoints=' + waypoints.map(encodeURIComponent).join('%7C');
       }
       window.open(url, '_blank');
-    },
-    err => {
+    })
+    .catch(err => {
       btn.disabled = false;
       btn.textContent = "Go";
       alert("Couldn't get your location — check location permission and try again.");
-    },
-    { enableHighAccuracy: true, timeout: 10000 }
-  );
+    });
 }
 
 function listenOrdersBadge() {
