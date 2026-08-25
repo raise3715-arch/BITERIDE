@@ -351,6 +351,28 @@
   .order-popup-btns .btn-primary{ background:var(--leaf); color:var(--cloud); flex:1; }
   .order-popup-btns .btn-danger{ flex:1; padding:14px; }
 
+  /* Reason modal — reject / cancel order */
+  .reason-modal-overlay{
+    position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:9200;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  .reason-modal-overlay.show{ display:flex; }
+  .reason-modal-card{
+    width:100%; max-width:380px; background:var(--ink); border:1px solid var(--field-border);
+    border-radius:16px; padding:22px; box-shadow:0 20px 50px rgba(0,0,0,.4);
+  }
+  .reason-modal-title{ color:var(--cloud); font-family:'Fraunces',serif; font-size:19px; font-weight:700; margin:0 0 4px; }
+  .reason-modal-sub{ color:var(--muted); font-size:12px; margin:0 0 14px; }
+  .reason-modal-card textarea{
+    width:100%; min-height:90px; padding:12px; border-radius:10px; background:var(--field-bg);
+    border:1px solid var(--field-border); color:var(--cloud); font-family:'Inter',sans-serif;
+    font-size:14px; resize:vertical; outline:none;
+  }
+  .reason-modal-error{ color:var(--chili); font-size:12px; margin:8px 0 0; display:none; }
+  .reason-modal-btns{ display:flex; gap:10px; margin-top:16px; }
+  .reason-modal-btns .btn-danger{ flex:1; padding:12px; }
+  .reason-modal-btns .btn-primary{ flex:1; padding:12px; }
+
   /* Delivery zone map */
   .zone-map-wrap{ position:relative; margin-top:10px; }
   .zone-map{ width:100%; height:340px; border-radius:14px; overflow:hidden; background:var(--field-bg); border:1px solid var(--field-border); }
@@ -483,6 +505,30 @@
   #operator-container .op-modal-card .op-mc-row{ font-size:.8rem; color:#a3b3a8; margin-bottom:8px; line-height:1.5; }
   #operator-container .op-modal-card .op-mc-row b{ color:#33ff66; }
   #operator-container .op-empty{ padding:24px 10px; text-align:center; color:#1f7a3d; font-size:.85rem; }
+  /* Operator: Orders (all shops) */
+  #operator-container .op-home-badge{ position:absolute; top:10px; right:10px; background:#dc2626; color:#fff; font-size:.66rem; font-weight:700; padding:2px 8px; border-radius:20px; }
+  #operator-container .op-order-tabs{ display:flex; gap:8px; margin-bottom:12px; }
+  #operator-container .op-order-tab{ flex:1; padding:9px 6px; text-align:center; background:#020a04; border:1px solid #124a24; color:#1f7a3d; font-size:.72rem; text-transform:uppercase; letter-spacing:.5px; cursor:pointer; font-family:inherit; }
+  #operator-container .op-order-tab.active{ background:#00ff41; color:#000; border-color:#00ff41; font-weight:700; }
+  #operator-container .op-order-item{ padding:12px 14px; border:1px solid #124a24; margin-bottom:8px; }
+  #operator-container .op-order-item.late{ border-color:#dc2626; background:#1a0505; }
+  #operator-container .op-order-top{ display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  #operator-container .op-order-shop{ font-weight:700; font-size:.9rem; color:#33ff66; }
+  #operator-container .op-order-shop::before{ content:'🏬 '; }
+  #operator-container .op-order-status-pill{ font-size:.62rem; padding:3px 9px; text-transform:uppercase; letter-spacing:.5px; white-space:nowrap; border:1px solid #124a24; color:#1f7a3d; flex-shrink:0; }
+  #operator-container .op-order-status-preparing, #operator-container .op-order-status-ready{ color:#33ff66; border-color:#1f7a3d; }
+  #operator-container .op-order-status-pending{ color:#f0a02c; border-color:#7a5a0f; }
+  #operator-container .op-order-status-delivered, #operator-container .op-order-status-completed, #operator-container .op-order-status-done{ color:#8b8b8b; border-color:#333; }
+  #operator-container .op-order-status-cancelled, #operator-container .op-order-status-rejected{ color:#f87171; border-color:#7a2a1d; }
+  #operator-container .op-order-sub{ font-size:.76rem; color:#1f7a3d; margin-top:4px; }
+  #operator-container .op-order-late-tag{ display:inline-block; margin-top:8px; padding:3px 9px; background:#dc2626; color:#fff; font-size:.65rem; font-weight:700; text-transform:uppercase; letter-spacing:.5px; }
+  /* Operator: Daily Report */
+  #operator-container input[type="date"]{ width:100%; padding:9px 10px; background:#020a04; color:#33ff66; border:1px solid #124a24; font-size:.85rem; font-family:inherit; color-scheme:dark; }
+  #operator-container input[type="date"]:focus{ outline:none; border-color:#00ff41; }
+  #operator-container .op-report-summary{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  #operator-container .op-report-summary-item{ flex:1; min-width:76px; background:#020a04; border:1px solid #124a24; padding:10px 6px; text-align:center; }
+  #operator-container .op-report-summary-item .n{ font-size:1.15rem; font-weight:700; color:#33ff66; }
+  #operator-container .op-report-summary-item .l{ font-size:.62rem; color:#1f7a3d; text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
   /* Operator conversation list / chat panel */
   #operator-container .op-app{ display:flex; height:100vh; max-width:900px; margin:0 auto; }
   #operator-container .op-sidebar{ width:280px; flex-shrink:0; border-right:1px solid #124a24; display:flex; flex-direction:column; background:#000; }
@@ -551,6 +597,20 @@
       </div>
       <p class="order-popup-eyebrow" id="popup-eyebrow">NEW ORDER</p>
       <div class="order-popup-list" id="popup-list"></div>
+    </div>
+  </div>
+
+  <!-- REASON MODAL — reject / cancel order -->
+  <div class="reason-modal-overlay" id="reason-modal-overlay">
+    <div class="reason-modal-card">
+      <p class="reason-modal-title" id="reason-modal-title">Reason</p>
+      <p class="reason-modal-sub">This will be shown to the customer in their app.</p>
+      <textarea id="reason-modal-input" placeholder="e.g. Item out of stock, kitchen closed, too far to deliver…"></textarea>
+      <p class="reason-modal-error" id="reason-modal-error">Please enter a reason.</p>
+      <div class="reason-modal-btns">
+        <button class="btn-danger" onclick="closeReasonModal()">Back</button>
+        <button class="btn-primary" onclick="confirmReasonModal()">Confirm</button>
+      </div>
     </div>
   </div>
 
@@ -748,6 +808,12 @@
     <p id="bulk-photo-status" style="padding:4px 24px 0; font-size:12px; color:var(--marigold); font-family:'Inter',sans-serif; display:none;"></p>
     <p id="bulk-import-status" style="padding:4px 24px 0; font-size:12px; color:var(--marigold); font-family:'Inter',sans-serif; display:none;"></p>
     <p id="menu-debug" style="padding:0 24px; font-size:11px; color:#E8A33D; font-family:monospace;"></p>
+    <div class="px" style="padding-top:6px; padding-bottom:2px;">
+      <div class="field" style="margin-bottom:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#2F80ED" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input id="stock-search-input" type="text" placeholder="Search stock items…" autocomplete="off" oninput="filterMenuBySearch()" />
+      </div>
+    </div>
     <div class="menu-list" id="menu-list"></div>
   </section>
 
@@ -1179,6 +1245,17 @@
         <button class="op-logout-btn" onclick="opLogout()">Logout</button>
       </div>
       <div class="op-home-grid">
+        <div class="op-home-card" onclick="opOpenSection('orders')" style="position:relative;">
+          <span class="op-home-badge" id="op-orders-home-badge" style="display:none;"></span>
+          <div class="op-home-icon">🧾</div>
+          <h3>Orders</h3>
+          <p>All orders from every shop — Delivered, In Progress, Cancelled</p>
+        </div>
+        <div class="op-home-card" onclick="opOpenSection('report')">
+          <div class="op-home-icon">📅</div>
+          <h3>Daily Report</h3>
+          <p>Pick a shop and date, see that day's orders, and clear old data</p>
+        </div>
         <div class="op-home-card" onclick="opOpenSection('push')">
           <div class="op-home-icon">⬆️</div>
           <h3>Push App Update</h3>
@@ -1200,6 +1277,53 @@
           <p>Chat live with any restaurant partner</p>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- ORDERS (all shops) -->
+  <div class="op-section" id="op-section-orders">
+    <div class="op-section-header">
+      <button class="op-back-btn" onclick="opOpenSection('home')">←</button>
+      <h2>Orders</h2>
+    </div>
+    <div class="op-section-body">
+      <div class="op-order-tabs">
+        <button type="button" class="op-order-tab active" data-tab="inprogress" onclick="opSwitchOrdersTab('inprogress')">In Progress</button>
+        <button type="button" class="op-order-tab" data-tab="delivered" onclick="opSwitchOrdersTab('delivered')">Delivered</button>
+        <button type="button" class="op-order-tab" data-tab="cancelled" onclick="opSwitchOrdersTab('cancelled')">Cancelled</button>
+      </div>
+      <div class="op-search-box"><input type="text" id="op-orders-search" placeholder="Search by shop, order # or customer..." oninput="opRenderOrdersList()"></div>
+      <div id="op-orders-list"></div>
+    </div>
+  </div>
+
+  <!-- DAILY REPORT — step 1: pick a shop -->
+  <div class="op-section" id="op-section-report">
+    <div class="op-section-header">
+      <button class="op-back-btn" onclick="opOpenSection('home')">←</button>
+      <h2>Daily Report</h2>
+    </div>
+    <div class="op-section-body">
+      <p class="op-note">Select a restaurant to view its orders for a specific date.</p>
+      <div class="op-search-box"><input type="text" id="op-report-shop-search" placeholder="Search restaurants..." oninput="opRenderReportShopList()"></div>
+      <div id="op-report-shop-list"></div>
+    </div>
+  </div>
+
+  <!-- DAILY REPORT — step 2: date + orders for that shop -->
+  <div class="op-section" id="op-section-report-detail">
+    <div class="op-section-header">
+      <button class="op-back-btn" onclick="opOpenSection('report')">←</button>
+      <h2 id="op-report-shop-name">Daily Report</h2>
+    </div>
+    <div class="op-section-body">
+      <div class="op-search-box" style="margin-bottom:14px;">
+        <input type="date" id="op-report-date-input" onchange="opRenderReportOrders()">
+      </div>
+      <div class="op-report-summary" id="op-report-summary"></div>
+      <div id="op-report-orders-list"></div>
+      <button type="button" class="op-btn op-btn-danger" id="op-report-delete-btn" style="margin-top:16px;width:100%;display:none;" onclick="opDeleteReportDate()">🗑 Delete this date's data from Firebase</button>
+      <p class="op-note" id="op-report-delete-status" style="margin-top:10px;"></p>
     </div>
   </div>
 
@@ -1536,15 +1660,57 @@ function renderOrderPopup(pendingList) {
 }
 
 async function handlePopupOrderAction(orderId, action) {
-  const newStatus = action === 'accept' ? 'preparing' : 'rejected';
+  if (action === 'reject') {
+    openReasonModal(orderId, 'rejected', 'Reason for rejecting this order');
+    return;
+  }
   try {
     const { db, ref, update } = window.fb;
-    await update(ref(db, 'restaurants/' + state.restId + '/orders/' + orderId), { status: newStatus });
+    await update(ref(db, 'restaurants/' + state.restId + '/orders/' + orderId), { status: 'preparing' });
   } catch (e) {}
-  showToast(action === 'accept' ? "Order accepted" : "Order rejected");
-  if (action === 'reject') playCancelAlert();
+  showToast("Order accepted");
   // listenOrdersBadge's onValue listener will fire again and re-render the
   // popup without this order — no manual DOM removal needed here.
+}
+
+/* ---- Reason modal — shared by "Reject" (new-order popup) and "Cancel
+   order" (order detail). The reason gets saved on the order as
+   `statusReason` and is shown to the customer in their app. ---- */
+let reasonModalOrderId = null;
+let reasonModalStatus = null;
+
+function openReasonModal(orderId, newStatus, promptLabel) {
+  reasonModalOrderId = orderId;
+  reasonModalStatus = newStatus;
+  document.getElementById('reason-modal-title').textContent = promptLabel;
+  document.getElementById('reason-modal-input').value = '';
+  document.getElementById('reason-modal-error').style.display = 'none';
+  document.getElementById('reason-modal-overlay').classList.add('show');
+}
+function closeReasonModal() {
+  document.getElementById('reason-modal-overlay').classList.remove('show');
+  reasonModalOrderId = null;
+  reasonModalStatus = null;
+}
+async function confirmReasonModal() {
+  const input = document.getElementById('reason-modal-input');
+  const reason = (input.value || '').trim();
+  const errEl = document.getElementById('reason-modal-error');
+  if (!reason) {
+    errEl.style.display = 'block';
+    return;
+  }
+  const orderId = reasonModalOrderId;
+  const newStatus = reasonModalStatus;
+  closeReasonModal();
+  try {
+    const { db, ref, update } = window.fb;
+    await update(ref(db, 'restaurants/' + state.restId + '/orders/' + orderId), { status: newStatus, statusReason: reason });
+    showToast(newStatus === 'rejected' ? "Order rejected" : "Order marked as " + newStatus);
+    playCancelAlert();
+  } catch (e) {
+    alert("Couldn't update order — check your connection and try again.");
+  }
 }
 
 window.addEventListener('fb-ready', init);
@@ -2267,7 +2433,7 @@ function listenMenu() {
     console.log('[stock-debug] restId=', state.restId, 'items received=', items.length, items);
     const dbg = document.getElementById('menu-debug');
     if (dbg) dbg.textContent = 'Debug: restId=' + state.restId + ' | server sent ' + items.length + ' item(s): ' + items.map(i => i.name).join(', ');
-    renderMenu(items);
+    filterMenuBySearch();
   }, (err) => {
     console.error('[stock-debug] onValue error:', err);
     const dbg = document.getElementById('menu-debug');
@@ -2275,13 +2441,26 @@ function listenMenu() {
   });
 }
 
-function renderMenu(items) {
+// Filters the cached menu items by the Stock screen's search box (name or
+// description) and re-renders. Re-applied on every live Firebase update too,
+// so an active search stays in effect as items change.
+function filterMenuBySearch() {
+  const input = document.getElementById('stock-search-input');
+  const q = (input && input.value || '').trim().toLowerCase();
+  const items = state.menuItems || [];
+  const filtered = q
+    ? items.filter(it => (it.name || '').toLowerCase().includes(q) || (it.desc || '').toLowerCase().includes(q))
+    : items;
+  renderMenu(filtered, !!q);
+}
+
+function renderMenu(items, isSearchFiltered) {
   const listEl = document.getElementById('menu-list');
   listEl.innerHTML = "";
   if (items.length === 0) {
     const p = document.createElement('p');
     p.className = "empty-text";
-    p.textContent = "No items yet. Tap \"Add item\" to build your menu.";
+    p.textContent = isSearchFiltered ? "No stock items match your search." : "No items yet. Tap \"Add item\" to build your menu.";
     listEl.appendChild(p);
     return;
   }
@@ -2896,7 +3075,13 @@ function renderOrderDetail(o) {
     const btn = document.createElement('button');
     btn.className = "status-btn " + b.cls;
     btn.textContent = b.label;
-    btn.addEventListener('click', () => updateOrderStatus(o._id, b.next));
+    btn.addEventListener('click', () => {
+      if (b.next === 'cancelled') {
+        openReasonModal(o._id, 'cancelled', 'Reason for cancelling this order');
+      } else {
+        updateOrderStatus(o._id, b.next);
+      }
+    });
     actionsEl.appendChild(btn);
   });
 }
@@ -3598,12 +3783,19 @@ let opCurrentPartnerId = null;
 let opAllPartners = [];
 let opChatUnsub = {};
 let opActiveChatId = null;
+let opOrdersTab = 'inprogress';
+let opOrdersLateTimer = null;
+const OP_ORDER_LATE_MS = 5 * 60 * 1000; // 5 minutes — shop hasn't accepted/rejected yet
+let opReportShopId = null;
+let opReportShopName = '';
+let opReportOrdersCache = []; // orders currently shown for the picked shop+date — used by the delete action
 
 function opEnterPanel() {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById('operator-container').classList.add('show');
   opOpenSection('home');
   opListenPartners();
+  setInterval(opUpdateOrdersHomeBadge, 30000); // keeps the "late" badge current even while sitting on the home screen
 }
 function opLogout() {
   localStorage.removeItem('asfood_is_operator');
@@ -3617,6 +3809,14 @@ function opOpenSection(name) {
   if (name === 'partners') opRenderPartnersList();
   if (name === 'support') opRenderChatConvList();
   if (name === 'pricing') opLoadExtraAmount();
+  if (name === 'report') opRenderReportShopList();
+  if (name === 'orders') {
+    opRenderOrdersList();
+    if (!opOrdersLateTimer) opOrdersLateTimer = setInterval(opRenderOrdersList, 30000);
+  } else if (opOrdersLateTimer) {
+    clearInterval(opOrdersLateTimer);
+    opOrdersLateTimer = null;
+  }
 }
 
 /* ---- Extra Amount (Paisa) added to every item price for customers ---- */
@@ -3721,9 +3921,192 @@ function opListenPartners() {
     opAllPartners = list;
     opRenderPartnersList();
     opRenderChatConvList();
+    opRenderOrdersList();
+    opUpdateOrdersHomeBadge();
+    const reportDetail = document.getElementById('op-section-report-detail');
+    if (reportDetail && reportDetail.classList.contains('active')) opRenderReportOrders();
   });
 }
 function opTypeLabel(t) { return t === 'groceries' ? 'Groceries' : t === 'online_shop' ? 'Online Shop' : 'Hotel'; }
+
+/* ---- Orders (flattened across every shop) ---- */
+// A shop's order counts as "not yet actioned" while it's still 'pending' —
+// the shop hasn't accepted (→ preparing) or rejected/cancelled it. Late =
+// still pending 5+ minutes after it was placed.
+function opFlattenAllOrders() {
+  const all = [];
+  opAllPartners.forEach(p => {
+    if (!p.orders) return;
+    const shopName = p.restaurantName || p._id;
+    Object.keys(p.orders).forEach(oid => {
+      all.push(Object.assign({ _shopId: p._id, _shopName: shopName }, { _id: oid }, p.orders[oid]));
+    });
+  });
+  return all;
+}
+function opOrderIsLate(o, now) {
+  const status = (o.status || 'pending').toLowerCase();
+  return status === 'pending' && (now - (o.createdAt || now)) > OP_ORDER_LATE_MS;
+}
+function opUpdateOrdersHomeBadge() {
+  const badge = document.getElementById('op-orders-home-badge');
+  if (!badge) return;
+  const now = Date.now();
+  const lateCount = opFlattenAllOrders().filter(o => opOrderIsLate(o, now)).length;
+  if (lateCount > 0) { badge.style.display = 'inline-block'; badge.textContent = lateCount + ' late'; }
+  else { badge.style.display = 'none'; }
+}
+function opSwitchOrdersTab(tab) {
+  opOrdersTab = tab;
+  document.querySelectorAll('#operator-container .op-order-tab').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  opRenderOrdersList();
+}
+function opRenderOrdersList() {
+  const wrap = document.getElementById('op-orders-list');
+  if (!wrap) return;
+  const searchEl = document.getElementById('op-orders-search');
+  const q = (searchEl && searchEl.value || '').toLowerCase();
+  const now = Date.now();
+
+  let list = opFlattenAllOrders().filter(o => {
+    const status = (o.status || 'pending').toLowerCase();
+    if (opOrdersTab === 'delivered') return ['delivered', 'completed', 'done'].includes(status);
+    if (opOrdersTab === 'cancelled') return ['cancelled', 'rejected'].includes(status);
+    return !['delivered', 'completed', 'done', 'cancelled', 'rejected'].includes(status); // in progress
+  });
+  if (q) {
+    list = list.filter(o =>
+      (o._shopName || '').toLowerCase().includes(q) ||
+      String(o.orderNumber || o._id || '').toLowerCase().includes(q) ||
+      (o.customerName || '').toLowerCase().includes(q)
+    );
+  }
+  list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  if (!list.length) { wrap.innerHTML = '<div class="op-empty">No orders here.</div>'; return; }
+
+  wrap.innerHTML = list.map(o => {
+    const status = (o.status || 'pending').toLowerCase();
+    const isLate = opOrderIsLate(o, now);
+    const itemCount = (o.items || []).reduce((s, it) => s + (it.qty || 0), 0);
+    return `
+      <div class="op-order-item${isLate ? ' late' : ''}">
+        <div class="op-order-top">
+          <span class="op-order-shop">${escapeHtml(o._shopName)}</span>
+          <span class="op-order-status-pill op-order-status-${status}">${escapeHtml(status)}</span>
+        </div>
+        <div class="op-order-sub">#${escapeHtml(String(o.orderNumber || o._id))} · ${escapeHtml(o.customerName || 'Guest')} · ₹${o.total || 0} · ${itemCount} item${itemCount === 1 ? '' : 's'} · ${timeAgo(o.createdAt || now)}</div>
+        ${isLate ? '<span class="op-order-late-tag">⚠ Not accepted/rejected in 5+ min</span>' : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ---- Daily Report (pick a shop, then a date, see + clear that day's orders) ---- */
+function opDateKey(ts) {
+  // Local-timezone YYYY-MM-DD (en-CA locale gives ISO order for free).
+  return new Date(ts || 0).toLocaleDateString('en-CA');
+}
+function opRenderReportShopList() {
+  const wrap = document.getElementById('op-report-shop-list');
+  if (!wrap) return;
+  const q = (document.getElementById('op-report-shop-search').value || '').toLowerCase();
+  const filtered = opAllPartners.filter(p => !q || (p.restaurantName || '').toLowerCase().includes(q) || p._id.toLowerCase().includes(q));
+  if (!filtered.length) { wrap.innerHTML = '<div class="op-empty">No restaurant partners found.</div>'; return; }
+  wrap.innerHTML = filtered.map(p => `
+    <div class="op-partner-item" onclick="opOpenReportShop('${p._id}')">
+      <div class="op-partner-top">
+        <span class="op-partner-name">${escapeHtml(p.restaurantName || p._id)}</span>
+        <span class="op-partner-type">${opTypeLabel(p.businessType)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+function opOpenReportShop(id) {
+  const p = opAllPartners.find(x => x._id === id);
+  opReportShopId = id;
+  opReportShopName = (p && p.restaurantName) || id;
+  document.getElementById('op-report-shop-name').textContent = opReportShopName;
+  const dateInput = document.getElementById('op-report-date-input');
+  if (!dateInput.value) dateInput.value = opDateKey(Date.now());
+  document.querySelectorAll('#operator-container .op-section').forEach(s => s.classList.remove('active'));
+  document.getElementById('op-section-report-detail').classList.add('active');
+  document.getElementById('op-report-delete-status').textContent = '';
+  opRenderReportOrders();
+}
+function opRenderReportOrders() {
+  const listEl = document.getElementById('op-report-orders-list');
+  const summaryEl = document.getElementById('op-report-summary');
+  const delBtn = document.getElementById('op-report-delete-btn');
+  if (!listEl || !opReportShopId) return;
+  const p = opAllPartners.find(x => x._id === opReportShopId);
+  const dateVal = document.getElementById('op-report-date-input').value;
+
+  const matched = (p && p.orders && dateVal)
+    ? Object.keys(p.orders).map(oid => Object.assign({ _id: oid }, p.orders[oid])).filter(o => opDateKey(o.createdAt) === dateVal)
+    : [];
+  opReportOrdersCache = matched;
+
+  if (!matched.length) {
+    listEl.innerHTML = '<div class="op-empty">No orders on this date.</div>';
+    summaryEl.innerHTML = '';
+    delBtn.style.display = 'none';
+    return;
+  }
+
+  matched.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+  const counts = { delivered: 0, cancelled: 0, other: 0 };
+  matched.forEach(o => {
+    const status = (o.status || 'pending').toLowerCase();
+    if (['delivered', 'completed', 'done'].includes(status)) counts.delivered++;
+    else if (['cancelled', 'rejected'].includes(status)) counts.cancelled++;
+    else counts.other++;
+  });
+
+  summaryEl.innerHTML = `
+    <div class="op-report-summary-item"><div class="n">${matched.length}</div><div class="l">Total</div></div>
+    <div class="op-report-summary-item"><div class="n">${counts.delivered}</div><div class="l">Delivered</div></div>
+    <div class="op-report-summary-item"><div class="n">${counts.cancelled}</div><div class="l">Cancelled</div></div>
+    <div class="op-report-summary-item"><div class="n">${counts.other}</div><div class="l">In Progress</div></div>
+  `;
+
+  listEl.innerHTML = matched.map(o => {
+    const status = (o.status || 'pending').toLowerCase();
+    const itemCount = (o.items || []).reduce((s, it) => s + (it.qty || 0), 0);
+    const timeStr = o.createdAt ? new Date(o.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+      <div class="op-order-item">
+        <div class="op-order-top">
+          <span class="op-order-shop" style="font-size:.85rem;">#${escapeHtml(String(o.orderNumber || o._id))}</span>
+          <span class="op-order-status-pill op-order-status-${status}">${escapeHtml(status)}</span>
+        </div>
+        <div class="op-order-sub">${escapeHtml(o.customerName || 'Guest')} · ₹${o.total || 0} · ${itemCount} item${itemCount === 1 ? '' : 's'} · ${timeStr}</div>
+      </div>
+    `;
+  }).join('');
+
+  delBtn.style.display = 'block';
+}
+function opDeleteReportDate() {
+  const delStatus = document.getElementById('op-report-delete-status');
+  if (!opReportShopId || !opReportOrdersCache.length) return;
+  const dateVal = document.getElementById('op-report-date-input').value;
+  if (!confirm('Permanently delete all ' + opReportOrdersCache.length + ' order(s) for ' + opReportShopName + ' on ' + dateVal + '?\n\nThis removes them from Firebase completely (frees up storage/bandwidth). This cannot be undone.')) return;
+  delStatus.textContent = 'Deleting...';
+  const { db, ref, update } = window.fb;
+  const updates = {};
+  opReportOrdersCache.forEach(o => { updates[o._id] = null; });
+  update(ref(db, 'restaurants/' + opReportShopId + '/orders'), updates).then(() => {
+    delStatus.textContent = 'Deleted ' + opReportOrdersCache.length + ' order(s) for ' + dateVal + '.';
+    opReportOrdersCache = [];
+    document.getElementById('op-report-orders-list').innerHTML = '<div class="op-empty">No orders on this date.</div>';
+    document.getElementById('op-report-summary').innerHTML = '';
+    document.getElementById('op-report-delete-btn').style.display = 'none';
+  }).catch(err => { delStatus.textContent = 'Error: ' + err.message; });
+}
 // Gross due = sum of platformDue on this partner's orders that have reached
 // "ready" or beyond (the operator's flat platform fee stamped onto each
 // order when it was placed), minus everything already recorded as settled
